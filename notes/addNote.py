@@ -3,10 +3,10 @@ from kivy.uix.screenmanager import Screen
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.textinput import TextInput
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.core.window import Window
+from kivy.uix.scrollview import ScrollView
 
 
 # Function to add a note to the database
@@ -56,38 +56,40 @@ class EditNotePage(Screen):
         app_bar.bg_color = (0.2, 0.6, 1, 1)  # Blue background for the app bar
 
         # Back button (arrow) in the app bar
-        back_button = Button(text="←", size_hint=(None, None), size=(50, 50), background_normal='', background_color=(0.1, 0.5, 0.9, 1), font_size=24, color=(1, 1, 1, 1))
+        back_button = Button(text="←", size_hint=(None, None), size=(50, 50), background_normal='', background_color=(0.1, 0.5, 0.9, 1), font_size=24, color=(1, 1, 1, 1), border=(0, 0, 0, 0))
         back_button.bind(on_press=self.go_to_main_page)
         app_bar.add_widget(back_button)
 
         # Title label "Edit Note" in the app bar
-        title_label = Label(text="Edit Note", bold=True, font_size=26, color=(0, 0, 0, 1), size_hint_x=0.8)
+        title_label = Label(text="Edit Note", bold=True, font_size=26, color=(1, 1, 1, 1), size_hint_x=0.8)
         app_bar.add_widget(title_label)
 
         # Add the app bar to the layout
         layout.add_widget(app_bar)
 
-        # Form layout
-        form_layout = BoxLayout(orientation='vertical', spacing=15, padding=[20, 10])
-
+        # Form layout with ScrollView to allow scrolling for larger content
+        scroll_layout = BoxLayout(orientation='vertical', spacing=15, padding=[20, 10])
+        scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height - 120))
+        
         # Note title input field
-        self.title_input = TextInput(hint_text="Enter Note Title", size_hint_y=None, height=50, multiline=False, font_size=18, background_color=(1, 1, 1, 1), foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1))
-        form_layout.add_widget(self.title_input)
+        self.title_input = TextInput(hint_text="Enter Note Title", size_hint_y=None, height=50, multiline=False, font_size=18, background_color=(1, 1, 1, 1), foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1), border_radius=10, padding=(10, 10))
+        scroll_layout.add_widget(self.title_input)
 
         # Note body input field
-        self.body_input = TextInput(hint_text="Enter Note Body", size_hint_y=None, height=200, multiline=True, font_size=18, background_color=(1, 1, 1, 1), foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1))
-        form_layout.add_widget(self.body_input)
+        self.body_input = TextInput(hint_text="Enter Note Body", size_hint_y=None, height=200, multiline=True, font_size=18, background_color=(1, 1, 1, 1), foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1), border_radius=10, padding=(10, 10))
+        scroll_layout.add_widget(self.body_input)
 
         # Load the note data to edit
         self.load_note_data()
 
         # Save button
-        save_button = Button(text="Save Note", size_hint=(None, None), size=(200, 50), font_size=20, background_normal='', background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1))
+        save_button = Button(text="Save Note", size_hint=(None, None), size=(200, 50), font_size=20, background_normal='', background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1), border_radius=10)
         save_button.bind(on_press=self.save_edited_note)
-        form_layout.add_widget(save_button)
+        scroll_layout.add_widget(save_button)
 
-        # Add the form layout to the main layout
-        layout.add_widget(form_layout)
+        # Add the scroll view and form layout to the main layout
+        scroll_view.add_widget(scroll_layout)
+        layout.add_widget(scroll_view)
 
         # Add the layout to the screen
         self.add_widget(layout)
@@ -143,7 +145,7 @@ class MainPage(Screen):
         app_bar.bg_color = (0.2, 0.6, 1, 1)  # Blue background for the app bar
 
         # Title label in the app bar
-        title_label = Label(text="Notes App", bold=True, font_size=26, color=(0, 0, 0, 1), size_hint_x=0.8)
+        title_label = Label(text="Notes App", bold=True, font_size=26, color=(1, 1, 1, 1), size_hint_x=0.8)
         app_bar.add_widget(title_label)
 
         # Add the app bar to the layout
@@ -160,7 +162,7 @@ class MainPage(Screen):
 
         # Add note cards to the layout (for now we just display some mock data)
         for note in self.notes:
-            note_card = Button(text=f"{note['title']}", size_hint_y=None, height=50)
+            note_card = Button(text=f"{note['title']}", size_hint_y=None, height=50, background_color=(0.1, 0.5, 0.9, 1), color=(1, 1, 1, 1), border_radius=10)
             note_card.bind(on_press=self.go_to_edit_note_page(note['id']))  # Bind to edit note
             self.notes_layout.add_widget(note_card)
 

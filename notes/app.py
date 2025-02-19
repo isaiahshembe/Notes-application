@@ -64,17 +64,17 @@ class NoteCard(BoxLayout):
         self.add_widget(self.title_label)
 
         # Edit button
-        edit_button = Button(text="Edit", size_hint_x=0.1, background_normal='', background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1))
+        edit_button = Button(text="Edit", size_hint_x=None, width=80, background_normal='', background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1))
         edit_button.bind(on_press=self.edit_note)
         self.add_widget(edit_button)
 
         # Share button
-        share_button = Button(text="Share", size_hint_x=0.1, background_normal='', background_color=(0.3, 0.8, 0.3, 1), color=(1, 1, 1, 1))
+        share_button = Button(text="Share", size_hint_x=None, width=80, background_normal='', background_color=(0.3, 0.8, 0.3, 1), color=(1, 1, 1, 1))
         share_button.bind(on_press=self.share_note)
         self.add_widget(share_button)
 
         # Delete button
-        delete_button = Button(text="Delete", size_hint_x=0.1, background_normal='', background_color=(0.8, 0.2, 0.2, 1), color=(1, 1, 1, 1))
+        delete_button = Button(text="Delete", size_hint_x=None, width=80, background_normal='', background_color=(0.8, 0.2, 0.2, 1), color=(1, 1, 1, 1))
         delete_button.bind(on_press=self.delete_note)
         self.add_widget(delete_button)
 

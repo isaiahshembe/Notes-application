@@ -1,179 +1,135 @@
-import os
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from ttkthemes import ThemedTk
-from tkinter import ttk
-from googleapiclient.http import MediaFileUpload
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-import tweepy
-import facebook
-import requests
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.graphics import Color, Rectangle
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.label import Label
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.checkbox import CheckBox
 
-# Directory to store notes
-NOTES_DIR = "saved_notes"
-os.makedirs(NOTES_DIR, exist_ok=True)
+import sqlite3
 
-# Global variable to store the current file path
-current_file_path = None
+# Database setup
+def create_db():
+    conn = sqlite3.connect('notes.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS notes
+                 (title TEXT, body TEXT)''')
+    conn.commit()
+    conn.close()
 
-# Note saving, opening, and deleting functions
-def save_note():
-    note_text = text_area.get("1.0", tk.END).strip()
-    global current_file_path
-    if note_text:
-        if current_file_path:
-            with open(current_file_path, "w", encoding="utf-8") as file:
-                file.write(note_text)
-            messagebox.showinfo("Success", "Note saved successfully!")
-        else:
-            file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")])
-            if file_path:
-                with open(file_path, "w", encoding="utf-8") as file:
-                    file.write(note_text)
-                messagebox.showinfo("Success", "Note saved successfully!")
-                current_file_path = file_path
-    else:
-        messagebox.showwarning("Warning", "Cannot save an empty note.")
+def add_note_to_db(title, body):
+    conn = sqlite3.connect('notes.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO notes (title, body) VALUES (?, ?)", (title, body))
+    conn.commit()
+    conn.close()
 
-def open_note():
-    global current_file_path
-    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")])
-    if file_path:
-        with open(file_path, "r", encoding="utf-8") as file:
-            text_area.delete("1.0", tk.END)
-            text_area.insert(tk.END, file.read())
-        current_file_path = file_path
+def get_notes_from_db():
+    conn = sqlite3.connect('notes.db')
+    c = conn.cursor()
+    c.execute("SELECT title, body FROM notes")
+    notes = c.fetchall()
+    conn.close()
+    return notes
 
-def delete_note():
-    if text_area.get("1.0", tk.END).strip():
-        if messagebox.askyesno("Confirm", "Are you sure you want to delete this note?"):
-            text_area.delete("1.0", tk.END)
-            global current_file_path
-            current_file_path = None
-            messagebox.showinfo("Success", "Note deleted successfully!")
-    else:
-        messagebox.showwarning("Warning", "No note to delete.")
 
-# Google Drive Authentication and Upload
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+# Main Page
+class MainPage(Screen):
+    def __init__(self, **kwargs):
+        super(MainPage, self).__init__(**kwargs)
 
-def google_drive_authenticate():
-    creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-    return build('drive', 'v3', credentials=creds)
+        # Create a BoxLayout to hold everything
+        layout = BoxLayout(orientation='vertical')
 
-def upload_to_google_drive(file_path):
-    try:
-        service = google_drive_authenticate()
-        file_metadata = {'name': os.path.basename(file_path)}
-        media = MediaFileUpload(file_path, mimetype='text/plain')
-        service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        messagebox.showinfo("Success", "Note uploaded to Google Drive!")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to upload to Google Drive: {e}")
+        # Create a canvas to set background color
+        with layout.canvas.before:
+            Color(1, 1, 1, 1)  # White background color
+            self.rect = Rectangle(size=layout.size, pos=layout.pos)
+            layout.bind(size=self._update_rect, pos=self._update_rect)
 
-# Social Media Sharing
-def share_on_twitter(note_text):
-    try:
-        auth = tweepy.OAuth1UserHandler(consumer_key="YOUR_CONSUMER_KEY", consumer_secret="YOUR_CONSUMER_SECRET", access_token="YOUR_ACCESS_TOKEN", access_token_secret="YOUR_ACCESS_TOKEN_SECRET")
-        api = tweepy.API(auth)
-        api.update_status(note_text)
-        messagebox.showinfo("Success", "Note shared on Twitter!")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to share on Twitter: {e}")
+        # Set up widgets
+        self.note_list = GridLayout(cols=1, spacing=10, padding=10)
+        self.update_notes()
 
-def share_on_facebook(note_text):
-    try:
-        graph = facebook.GraphAPI(access_token="YOUR_FACEBOOK_ACCESS_TOKEN")
-        graph.put_object(parent_object='me', connection_name='feed', message=note_text)
-        messagebox.showinfo("Success", "Note shared on Facebook!")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to share on Facebook: {e}")
+        self.add_note_button = Button(text="Add Note", size_hint=(None, None), size=(200, 50))
+        self.add_note_button.bind(on_release=self.go_to_second_page)
 
-def share_on_instagram(note_text):
-    try:
-        response = requests.post("https://graph.instagram.com/me/media",
-                                 params={"access_token": "YOUR_INSTAGRAM_ACCESS_TOKEN", "caption": note_text})
-        if response.status_code == 200:
-            messagebox.showinfo("Success", "Note shared on Instagram!")
-        else:
-            messagebox.showerror("Error", "Failed to share on Instagram.")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to share on Instagram: {e}")
+        # Adding widgets to the layout
+        layout.add_widget(self.add_note_button)
+        layout.add_widget(self.note_list)
 
-# Toggle Dark Mode
-def toggle_dark_mode():
-    global dark_mode
-    if dark_mode:
-        root.style.theme_use("default")
-        text_area.config(bg="white", fg="black")
-    else:
-        root.style.theme_use("equilux")
-        text_area.config(bg="#15202B", fg="white")
-    dark_mode = not dark_mode
+        self.add_widget(layout)
 
-# Main app window
-root = ThemedTk(theme="default")
-root.title("Notepad")
-root.geometry("600x500")
-root.style = ttk.Style()
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
 
-# Sidebar frame
-sidebar = tk.Frame(root, bg="#1DA1F2", width=100, height=500)
-sidebar.pack(side="left", fill="y")
+    def update_notes(self):
+        self.note_list.clear_widgets()  # Clear previous notes
 
-# Menu Bar
-menu_bar = tk.Menu(root)
-root.config(menu=menu_bar)
+        notes = get_notes_from_db()
+        for title, body in notes:
+            note = BoxLayout(orientation='horizontal', size_hint_y=None, height=40)
+            note.add_widget(Label(text=title, size_hint_x=0.8))
+            note.add_widget(Button(text="View", size_hint_x=0.2, on_release=lambda btn, t=title, b=body: self.view_note(t, b)))
+            self.note_list.add_widget(note)
 
-# File Menu
-file_menu = tk.Menu(menu_bar, tearoff=0)
-file_menu.add_command(label="New Note", command=lambda: text_area.delete("1.0", tk.END))
-file_menu.add_command(label="Save Note (Ctrl+S)", command=save_note)
-file_menu.add_command(label="Open Note (Ctrl+O)", command=open_note)
-file_menu.add_command(label="Delete Note", command=delete_note)
-file_menu.add_separator()
-file_menu.add_command(label="Exit", command=root.quit)
-menu_bar.add_cascade(label="File", menu=file_menu)
+    def view_note(self, title, body):
+        self.manager.current = 'second_page'
+        self.manager.get_screen('second_page').set_note_details(title, body)
 
-# Sidebar Buttons
-buttons = [
-    ("📝 New", lambda: text_area.delete("1.0", tk.END)),
-    ("💾 Save", save_note),
-    ("📂 Open", open_note),
-    ("🗑 Delete", delete_note),
-    ("🌙 Dark Mode", toggle_dark_mode),
-    ("🐦 Twitter", lambda: share_on_twitter(text_area.get("1.0", tk.END))),
-    ("📘 Facebook", lambda: share_on_facebook(text_area.get("1.0", tk.END))),
-    ("📸 Instagram", lambda: share_on_instagram(text_area.get("1.0", tk.END))),
-    ("☁️ Google Drive", lambda: upload_to_google_drive("your_note_path_here"))
-]
+    def go_to_second_page(self, instance):
+        self.manager.current = 'second_page'
 
-# Add all buttons to the sidebar
-for text, cmd in buttons:
-    ttk.Button(sidebar, text=text, command=cmd, style="TButton").pack(pady=10, padx=10, fill="x")
 
-# Main text area
-text_area = tk.Text(root, wrap="word", font=("Arial", 12), bg="white", fg="black")
-text_area.pack(expand=True, fill="both", padx=10, pady=10)
+# Second Page (Add/Update Note)
+class SecondPage(Screen):
+    def __init__(self, **kwargs):
+        super(SecondPage, self).__init__(**kwargs)
 
-# Floating 'New Note' button
-new_note_button = ttk.Button(root, text="➕ New Note", command=lambda: text_area.delete("1.0", tk.END))
-new_note_button.place(relx=0.9, rely=0.9, anchor="center")
+        layout = BoxLayout(orientation='vertical', padding=20)
 
-# Dark mode status
-dark_mode = False
+        self.title_input = TextInput(hint_text="Note Title", multiline=False)
+        self.body_input = TextInput(hint_text="Note Body", multiline=True)
 
-# Run the application
-root.mainloop()
+        save_button = Button(text="Save", size_hint=(None, None), size=(200, 50))
+        save_button.bind(on_release=self.save_note)
+
+        layout.add_widget(self.title_input)
+        layout.add_widget(self.body_input)
+        layout.add_widget(save_button)
+
+        self.add_widget(layout)
+
+    def set_note_details(self, title, body):
+        self.title_input.text = title
+        self.body_input.text = body
+
+    def save_note(self, instance):
+        title = self.title_input.text
+        body = self.body_input.text
+
+        if title and body:
+            add_note_to_db(title, body)
+            self.manager.current = 'main_page'  # Go back to main page to see the new note
+
+
+# Main App
+class NotesApp(App):
+    def build(self):
+        create_db()
+
+        sm = ScreenManager()
+        sm.add_widget(MainPage(name='main_page'))
+        sm.add_widget(SecondPage(name='second_page'))
+
+        return sm
+
+
+# Run the app
+if __name__ == '__main__':
+    NotesApp().run()

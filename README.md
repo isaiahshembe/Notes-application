@@ -10,7 +10,7 @@ This app includes a variety of useful features such as the ability to create, ed
 
 
 🏆 Contributors
-The project was developed by the following contributors: Nuweisah Isaiah (23/U/26082/PS), Abwor Tina Marion (23/U/04872/EVE), and Naluwaga Joy Dricilla (23/U/14160/EVE). Each team member played a crucial role in the development of the app, from design to implementation.
+The project was developed by the following contributors: NUWEISAH ISAIAH (23/U/26082/PS), ABWOR TINA MARION (23/U/04872/EVE), and NALUWAGA JOY DRICILLA (23/U/14160/EVE). Each team member played a crucial role in the development of the app, from design to implementation.
 
 
 📦 Project Setup

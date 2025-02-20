@@ -50,6 +50,19 @@ def delete_note_from_db(note_id):
     c.execute("DELETE FROM notes WHERE id=?", (note_id,))
     conn.commit()
     conn.close()
+def get_note_by_id(self, note_id):
+    conn = sqlite3.connect('notes.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM notes WHERE id=?", (note_id,))
+    note = c.fetchone()  # Fetch a single row (note) by ID
+    conn.close()
+    return note
+
+def load_note_for_editing(self, note_id):
+    self.note_id = note_id
+    note = self.get_note_by_id(note_id)
+    self.title_input.text = note[1]  # Set the title input to the current note's title
+    self.body_input.text = note[2]   # Set the body input to the current note's body
 
 def update_note_in_db(note_id, title, body):
     conn = sqlite3.connect('notes.db')
@@ -96,7 +109,11 @@ class NoteCard(BoxLayout):
         self.add_widget(delete_button)
 
     def edit_note(self, instance):
-        print(f"Editing note: {self.title_label.text}")
+
+     edit_screen = self.parent.parent.get_screen('edit_page')
+    edit_screen.load_note_for_editing(self.note_id)
+    self.parent.parent.current = 'edit_page'
+    print(f"Editing note: {self.title_label.text}")
         # You can implement functionality to edit the note here
 
     def share_note(self, instance):
@@ -226,6 +243,76 @@ class SecondPage(Screen):
         else:
             print("Both title and body are required to save a note.")
 
+class EditPage(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        layout = BoxLayout(orientation='vertical', padding=[10, 10], spacing=20)
+
+        # App bar with back button
+        app_bar = BoxLayout(size_hint_y=None, height=60, orientation='horizontal', padding=[10, 5], spacing=10)
+        back_button = Button(text="←", size_hint=(None, None), size=(50, 50), background_normal='', background_color=(0.1, 0.5, 0.9, 1), font_size=24, color=(1, 1, 1, 1))
+        back_button.bind(on_press=self.go_to_main_page)
+        app_bar.add_widget(back_button)
+
+        title_label = Label(text="Edit Note", bold=True, font_size=26, color=(0, 0, 0, 1), size_hint_x=0.8)
+        app_bar.add_widget(title_label)
+        layout.add_widget(app_bar)
+
+        # Form layout for editing note
+        form_layout = BoxLayout(orientation='vertical', spacing=15, padding=[20, 10])
+        self.title_input = TextInput(hint_text="Enter Note Title", size_hint_y=None, height=50, multiline=False, font_size=18)
+        form_layout.add_widget(self.title_input)
+
+        self.body_input = TextInput(hint_text="Enter Note Body", size_hint_y=None, height=200, multiline=True, font_size=18)
+        form_layout.add_widget(self.body_input)
+
+        save_button = Button(text="Save Changes", size_hint=(None, None), size=(200, 50), font_size=20, background_normal='', background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1))
+        save_button.bind(on_press=self.save_edited_note)
+        form_layout.add_widget(save_button)
+
+        layout.add_widget(form_layout)
+        self.add_widget(layout)
+
+    def go_to_main_page(self, instance):
+        self.manager.current = 'main_page'  # Switch back to main page
+
+    def load_note_for_editing(self, note_id):
+        self.note_id = note_id
+        note = self.get_note_by_id(note_id)
+        self.title_input.text = note[1]  # Set the title input to the current note's title
+        self.body_input.text = note[2]   # Set the body input to the current note's body
+
+    def get_note_by_id(self, note_id):
+        conn = sqlite3.connect('notes.db')
+        c = conn.cursor()
+        c.execute("SELECT * FROM notes WHERE id=?", (note_id,))
+        note = c.fetchone()
+        conn.close()
+        return note
+
+    def save_edited_note(self, instance):
+        title = self.title_input.text
+        body = self.body_input.text
+
+        if title and body:
+            update_note_in_db(self.note_id, title, body)  # Update the note in the database
+            print(f"Note Updated! Title: {title}, Body: {body}")
+
+            # Clear the input fields
+            self.title_input.text = ""
+            self.body_input.text = ""
+            self.manager.get_screen('main_page').refresh_notes()  # Refresh the main page
+
+            self.manager.current = 'main_page'  # Go back to main page
+        else:
+            print("Both title and body are required to save a note.")
+
+class NoteCard(BoxLayout):
+    def __init__(self, note_id, edit_screen, **kwargs):
+        super().__init__(**kwargs)
+        self.note_id = note_id
+        self.edit_screen = edit_screen
 
 # Main App
 class MyApp(App):
@@ -238,10 +325,12 @@ class MyApp(App):
         # Create screens
         main_page = MainPage(name='main_page')
         second_page = SecondPage(name='second_page')
+        edit_page = EditPage(name='edit_page') 
 
         # Add screens to the manager
         screen_manager.add_widget(main_page)
         screen_manager.add_widget(second_page)
+        screen_manager.add_widget(edit_page)
 
         return screen_manager
 

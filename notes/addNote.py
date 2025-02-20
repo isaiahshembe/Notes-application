@@ -1,12 +1,13 @@
 import sqlite3
-from kivy.uix.screenmanager import Screen
+from kivy.uix.screenmanager import Screen, ScreenManager
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
-from kivy.graphics import Color, Rectangle, RoundedRectangle
+from kivy.graphics import Color, Rectangle, RoundedRectangle  # Ensure Rectangle is imported
 from kivy.core.window import Window
 from kivy.uix.scrollview import ScrollView
+from kivy.app import App
 
 
 # Function to add a note to the database
@@ -37,6 +38,35 @@ def update_note_in_db(note_id, title, body):
     conn.close()
 
 
+# Custom button class with rounded corners
+class RoundedButton(Button):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        with self.canvas.before:
+            Color(0.1, 0.5, 0.9, 1)  # Set the background color
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[(25, 25)])  # Rounded corners
+        self.bind(size=self._update_rect, pos=self._update_rect)
+
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+
+# Custom TextInput with rounded corners
+class RoundedTextInput(TextInput):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        with self.canvas.before:
+            Color(1, 1, 1, 1)  # White background
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[(10, 10)])  # Rounded corners
+        self.bind(size=self._update_rect, pos=self._update_rect)
+
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+
+# EditNotePage Class
 class EditNotePage(Screen):
     def __init__(self, note_id, **kwargs):
         super().__init__(**kwargs)
@@ -56,7 +86,7 @@ class EditNotePage(Screen):
         app_bar.bg_color = (0.2, 0.6, 1, 1)  # Blue background for the app bar
 
         # Back button (arrow) in the app bar
-        back_button = Button(text="←", size_hint=(None, None), size=(50, 50), background_normal='', background_color=(0.1, 0.5, 0.9, 1), font_size=24, color=(1, 1, 1, 1), border=(0, 0, 0, 0))
+        back_button = RoundedButton(text="←", size_hint=(None, None), size=(50, 50), background_normal='', font_size=24, color=(1, 1, 1, 1))
         back_button.bind(on_press=self.go_to_main_page)
         app_bar.add_widget(back_button)
 
@@ -72,18 +102,18 @@ class EditNotePage(Screen):
         scroll_view = ScrollView(size_hint=(1, None), size=(Window.width, Window.height - 120))
         
         # Note title input field
-        self.title_input = TextInput(hint_text="Enter Note Title", size_hint_y=None, height=50, multiline=False, font_size=18, background_color=(1, 1, 1, 1), foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1), border_radius=10, padding=(10, 10))
+        self.title_input = RoundedTextInput(hint_text="Enter Note Title", size_hint_y=None, height=50, multiline=False, font_size=18, foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1), padding=(10, 10))
         scroll_layout.add_widget(self.title_input)
 
         # Note body input field
-        self.body_input = TextInput(hint_text="Enter Note Body", size_hint_y=None, height=200, multiline=True, font_size=18, background_color=(1, 1, 1, 1), foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1), border_radius=10, padding=(10, 10))
+        self.body_input = RoundedTextInput(hint_text="Enter Note Body", size_hint_y=None, height=200, multiline=True, font_size=18, foreground_color=(0, 0, 0, 1), hint_text_color=(0.5, 0.5, 0.5, 1), padding=(10, 10))
         scroll_layout.add_widget(self.body_input)
 
         # Load the note data to edit
         self.load_note_data()
 
         # Save button
-        save_button = Button(text="Save Note", size_hint=(None, None), size=(200, 50), font_size=20, background_normal='', background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1), border_radius=10)
+        save_button = RoundedButton(text="Save Note", size_hint=(None, None), size=(200, 50), font_size=20, background_normal='', color=(1, 1, 1, 1))
         save_button.bind(on_press=self.save_edited_note)
         scroll_layout.add_widget(save_button)
 
@@ -127,6 +157,7 @@ class EditNotePage(Screen):
             print("Both title and body are required to save a note.")
 
 
+# MainPage Class
 class MainPage(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -162,8 +193,8 @@ class MainPage(Screen):
 
         # Add note cards to the layout (for now we just display some mock data)
         for note in self.notes:
-            note_card = Button(text=f"{note['title']}", size_hint_y=None, height=50, background_color=(0.1, 0.5, 0.9, 1), color=(1, 1, 1, 1), border_radius=10)
-            note_card.bind(on_press=self.go_to_edit_note_page(note['id']))  # Bind to edit note
+            note_card = RoundedButton(text=f"{note['title']}", size_hint_y=None, height=50, color=(1, 1, 1, 1))
+            note_card.bind(on_press=lambda instance, note_id=note['id']: self.go_to_edit_note_page(note_id)(instance))
             self.notes_layout.add_widget(note_card)
 
         layout.add_widget(self.notes_layout)
@@ -181,3 +212,18 @@ class MainPage(Screen):
             self.manager.current = 'edit_note_page'
             self.manager.get_screen('edit_note_page').note_id = note_id
         return inner
+
+
+# App Class
+class NotesApp(App):
+    def build(self):
+        sm = ScreenManager()
+
+        sm.add_widget(MainPage(name="main_page"))
+        sm.add_widget(EditNotePage(name="edit_note_page", note_id=1))  # Pass an example note ID here
+
+        return sm
+
+
+if __name__ == "__main__":
+    NotesApp().run()

@@ -74,18 +74,24 @@ class NoteCard(BoxLayout):
         self.title_label.bind(size=self.title_label.setter('text_size'))  # Ensure text wraps
         self.add_widget(self.title_label)
 
-        # Edit button
-        edit_button = Button(text="Edit", size_hint_x=None, width=80, background_normal='', background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1))
+        # Edit button (circular)
+        edit_button = Button(text="Edit", size_hint_x=None, width=50, height=50, background_normal='', 
+                             background_color=(0.2, 0.6, 1, 1), color=(1, 1, 1, 1), 
+                             border=[25, 25, 25, 25])  # Circular button
         edit_button.bind(on_press=self.edit_note)
         self.add_widget(edit_button)
 
-        # Share button
-        share_button = Button(text="Share", size_hint_x=None, width=80, background_normal='', background_color=(0.3, 0.8, 0.3, 1), color=(1, 1, 1, 1))
+        # Share button (circular)
+        share_button = Button(text="Share", size_hint_x=None, width=50, height=50, background_normal='', 
+                              background_color=(0.3, 0.8, 0.3, 1), color=(1, 1, 1, 1), 
+                              border=[25, 25, 25, 25])  # Circular button
         share_button.bind(on_press=self.share_note)
         self.add_widget(share_button)
 
-        # Delete button
-        delete_button = Button(text="Delete", size_hint_x=None, width=80, background_normal='', background_color=(0.8, 0.2, 0.2, 1), color=(1, 1, 1, 1))
+        # Delete button (circular)
+        delete_button = Button(text="Delete", size_hint_x=None, width=50, height=50, background_normal='', 
+                               background_color=(0.8, 0.2, 0.2, 1), color=(1, 1, 1, 1), 
+                               border=[25, 25, 25, 25])  # Circular button
         delete_button.bind(on_press=self.delete_note)
         self.add_widget(delete_button)
 
@@ -101,12 +107,6 @@ class NoteCard(BoxLayout):
         print(f"Deleting note: {self.title_label.text}")
         delete_note_from_db(self.note_id)  # Delete from database
         self.parent.remove_widget(self)  # Remove the card from the list
-
-    def confirm_delete(self, button, note_id, popup):
-        if button == 'Yes':
-            delete_note_from_db(note_id)
-            self.parent.remove_widget(self)
-        popup.dismiss()
 
 # Main Page Screen: Displays notes
 class MainPage(Screen):
@@ -220,13 +220,11 @@ class SecondPage(Screen):
             # Clear the input fields
             self.title_input.text = ""
             self.body_input.text = ""
-             # *** KEY CHANGE: Refresh the MainPage ***
-            self.manager.get_screen('main_page').refresh_notes()  # <--- This line is the key change
+            self.manager.get_screen('main_page').refresh_notes()  # Refresh the main page
 
             self.manager.current = 'main_page'  # Go back to main page
         else:
             print("Both title and body are required to save a note.")
-            
 
 
 # Main App

@@ -11,6 +11,11 @@ from kivy.uix.widget import Widget
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.textinput import TextInput
 
+# Constants
+BACKGROUND_COLOR = (0.95, 0.95, 0.95, 1)  # Light gray background
+BUTTON_COLOR = (0.2, 0.6, 1, 1)
+DELETE_COLOR = (0.8, 0.2, 0.2, 1)
+SHARE_COLOR = (0.3, 0.8, 0.3, 1)
 
 # Database Functions
 def create_db():
@@ -46,6 +51,12 @@ def delete_note_from_db(note_id):
     conn.commit()
     conn.close()
 
+def update_note_in_db(note_id, title, body):
+    conn = sqlite3.connect('notes.db')
+    c = conn.cursor()
+    c.execute("UPDATE notes SET title=?, body=? WHERE id=?", (title, body, note_id))
+    conn.commit()
+    conn.close()
 
 # NoteCard Widget for displaying each note
 class NoteCard(BoxLayout):
@@ -91,6 +102,11 @@ class NoteCard(BoxLayout):
         delete_note_from_db(self.note_id)  # Delete from database
         self.parent.remove_widget(self)  # Remove the card from the list
 
+    def confirm_delete(self, button, note_id, popup):
+        if button == 'Yes':
+            delete_note_from_db(note_id)
+            self.parent.remove_widget(self)
+        popup.dismiss()
 
 # Main Page Screen: Displays notes
 class MainPage(Screen):
@@ -204,9 +220,13 @@ class SecondPage(Screen):
             # Clear the input fields
             self.title_input.text = ""
             self.body_input.text = ""
+             # *** KEY CHANGE: Refresh the MainPage ***
+            self.manager.get_screen('main_page').refresh_notes()  # <--- This line is the key change
+
             self.manager.current = 'main_page'  # Go back to main page
         else:
             print("Both title and body are required to save a note.")
+            
 
 
 # Main App

@@ -1,6 +1,5 @@
 
 📒 Android Note-Taking App
-📌 Project Overview
 This project is a simple yet feature-rich Android note-taking app developed using Python, Kivy/KivyMD, and SQLite/JSON for local storage. 
 The app allows users to create, save, edit, delete, and share notes.
 Additionally, it includes advanced features such as tagging people, searching within notes, and setting reminders for time-bound tasks.

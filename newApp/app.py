@@ -91,7 +91,9 @@ class NoteCard(BoxLayout):
 
     def edit_note(self, instance):
         print(f"Editing note: {self.title_label.text}")
-        # You can implement functionality to edit the note here
+        screen_manager = App.get_running_app().root  # Get the ScreenManager from the root widget
+        edit_screen = screen_manager.get_screen('edit_page')  # Access the 'edit_page' screen
+        edit_screen.load_note_for_editing(self.note_id, self.title_label.text)
 
     def share_note(self, instance):
         print(f"Sharing note: {self.title_label.text}")
@@ -101,12 +103,6 @@ class NoteCard(BoxLayout):
         print(f"Deleting note: {self.title_label.text}")
         delete_note_from_db(self.note_id)  # Delete from database
         self.parent.remove_widget(self)  # Remove the card from the list
-
-    def confirm_delete(self, button, note_id, popup):
-        if button == 'Yes':
-            delete_note_from_db(note_id)
-            self.parent.remove_widget(self)
-        popup.dismiss()
 
 # Main Page Screen: Displays notes
 class MainPage(Screen):
@@ -220,13 +216,13 @@ class SecondPage(Screen):
             # Clear the input fields
             self.title_input.text = ""
             self.body_input.text = ""
-             # *** KEY CHANGE: Refresh the MainPage ***
-            self.manager.get_screen('main_page').refresh_notes()  # <--- This line is the key change
+            
+            # Refresh the MainPage
+            self.manager.get_screen('main_page').refresh_notes()
 
             self.manager.current = 'main_page'  # Go back to main page
         else:
             print("Both title and body are required to save a note.")
-            
 
 
 # Main App

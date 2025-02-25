@@ -92,7 +92,7 @@ class NoteCard(BoxLayout):
     def edit_note(self, instance):
         print(f"Editing note: {self.title_label.text}")
         screen_manager = App.get_running_app().root  # Get the ScreenManager from the root widget
-        edit_screen = screen_manager.get_screen('edit_page')  # Access the 'edit_page' screen
+        edit_screen = screen_manager.get_screen('second_page')  # Access the 'second_page' screen
         edit_screen.load_note_for_editing(self.note_id, self.title_label.text)
 
     def share_note(self, instance):
@@ -223,7 +223,6 @@ class SecondPage(Screen):
             self.manager.current = 'main_page'  # Go back to main page
         else:
             print("Both title and body are required to save a note.")
-
 
 # Main App
 class MyApp(App):

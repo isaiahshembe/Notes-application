@@ -8,7 +8,8 @@ from kivy.uix.textinput import TextInput
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.core.window import Window
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.floatlayout import FloatLayout  # Add this import
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.gridlayout import GridLayout
 
 
 # Function to add a note to the database
@@ -154,25 +155,32 @@ class MainPage(Screen):
         # Add the app bar to the layout
         layout.add_widget(app_bar)
 
-        # Display notes layout
-        self.notes_layout = BoxLayout(orientation='vertical', spacing=10, padding=[10, 10])
+        # ScrollView for notes
+        scroll_view = ScrollView(size_hint=(1, 1), do_scroll_x=False)
+
+        # GridLayout for notes (2 columns)
+        self.notes_layout = GridLayout(cols=2, spacing=10, padding=[10, 10], size_hint_y=None)
+        self.notes_layout.bind(minimum_height=self.notes_layout.setter('height'))  # Allow scrolling
 
         # Simulated Notes List (You will replace this with actual data from the database)
         self.notes = [
             {'id': 1, 'title': "Sample Note 1", 'body': "This is the first note."},
-            {'id': 2, 'title': "Sample Note 2", 'body': "This is the second note."}
+            {'id': 2, 'title': "Sample Note 2", 'body': "This is the second note."},
+            {'id': 3, 'title': "Sample Note 3", 'body': "This is the third note."},
+            {'id': 4, 'title': "Sample Note 4", 'body': "This is the fourth note."}
         ]
 
-        # Add note cards to the layout (for now we just display some mock data)
+        # Add note cards to the layout
         for note in self.notes:
-            note_card = Button(text=f"{note['title']}", size_hint_y=None, height=50, background_color=(0.1, 0.5, 0.9, 1), color=(1, 1, 1, 1))
+            note_card = Button(text=f"{note['title']}", size_hint_y=None, height=100, background_color=(0.1, 0.5, 0.9, 1), color=(1, 1, 1, 1))
             with note_card.canvas.before:
                 Color(0.1, 0.5, 0.9, 1)  # Button background color
                 RoundedRectangle(size=note_card.size, pos=note_card.pos, radius=[10,])  # Rounded corners
             note_card.bind(on_press=self.go_to_edit_note_page(note['id']))  # Bind to edit note
             self.notes_layout.add_widget(note_card)
 
-        layout.add_widget(self.notes_layout)
+        scroll_view.add_widget(self.notes_layout)
+        layout.add_widget(scroll_view)
 
         # Add a floating circular "Add Note" button
         float_layout = FloatLayout()

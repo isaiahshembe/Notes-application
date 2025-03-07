@@ -13,6 +13,7 @@ from kivy.uix.screenmanager import ScreenManager
 import sqlite3
 from kivy.graphics import Color, RoundedRectangle
 from kivymd.uix.button import MDRaisedButton
+from kivy.uix.floatlayout import FloatLayout  # Added FloatLayout
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -38,12 +39,18 @@ class NotesApp(MDApp):
         self.screen_manager = ScreenManager()
         self.main_screen = MDScreen(name='main')
 
-        # Top app bar with search bar
+        # Create a FloatLayout to position the search bar on the right
+        float_layout = FloatLayout()
+
+        # Search bar with reduced height and positioned on the right
         self.search_bar = TextInput(
             hint_text='Search notes...',
-            size_hint_x=0.7,
+            size_hint=(None, None),
+            width=200,  # You can adjust the width to your preference
+            height=30,  # Reduced height
             multiline=False,
-            on_text=self.filter_notes
+            on_text=self.filter_notes,
+            pos_hint={"right": 1, "top": 1}  # Positions it at the top-right
         )
 
         top_app_bar = MDTopAppBar(
@@ -82,8 +89,7 @@ class NotesApp(MDApp):
 
         self.main_screen.add_widget(content_layout)
         self.main_screen.add_widget(top_app_bar)
-        self.main_screen.add_widget(self.search_bar)
-        self.search_bar.opacity = 0  # Hide search bar initially
+        self.main_screen.add_widget(self.search_bar)  # Add the search bar to the screen
 
         self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
         self.add_note_screen.name = 'add_note'

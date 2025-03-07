@@ -10,7 +10,7 @@ from edit_note import EditNoteScreen
 from share_note import ShareNoteScreen
 from kivy.uix.screenmanager import ScreenManager
 import sqlite3
-import platform
+from kivy.graphics import Color, RoundedRectangle
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -60,10 +60,18 @@ class NotesApp(MDApp):
             padding=(12, 0, 12, 12)  # Add padding around the content
         )
 
+        # Add a background with rounded corners and color
+        with content_layout.canvas.before:
+            Color(0.9, 0.9, 0.9, 1)  # Set background color (light gray)
+            self.rect = RoundedRectangle(size=(content_layout.width, content_layout.height), 
+                                         pos=content_layout.pos, radius=[10, 10, 10, 10])
+
+        content_layout.bind(size=self.update_rect, pos=self.update_rect)  # Update the background size and position
+        
         # ScrollView for notes
         scroll_view = ScrollView(size_hint=(1, 1))
         self.notes_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)  # Add spacing between notes
-        self.notes_layout.bind(minimum_height=self.notes_layout.setter('height'))
+        self.notes_layout.bind(minimum_height=self.notes_layout.setter('height'))  # Dynamically adjust height
 
         # Load notes from database
         self.load_notes()
@@ -94,6 +102,11 @@ class NotesApp(MDApp):
         self.screen_manager.add_widget(self.share_note_screen)
         
         return self.screen_manager
+
+    def update_rect(self, instance, value):
+        """Update the rectangle background size and position dynamically."""
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
 
     def open_add_note_screen(self):
         self.screen_manager.current = 'add_note'

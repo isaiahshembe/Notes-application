@@ -11,6 +11,7 @@ from share_note import ShareNoteScreen
 from kivy.uix.screenmanager import ScreenManager
 import sqlite3
 from kivy.graphics import Color, RoundedRectangle
+from kivymd.uix.button import MDRaisedButton
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -100,7 +101,17 @@ class NotesApp(MDApp):
         self.screen_manager.add_widget(self.add_note_screen)
         self.screen_manager.add_widget(self.edit_note_screen)
         self.screen_manager.add_widget(self.share_note_screen)
-        
+
+        # Add a button at the bottom-right corner to open the add note screen
+        add_note_button = MDRaisedButton(
+            text="+",
+            size_hint=(None, None),
+            size=(200, 50),
+            pos_hint={"right": 1, "bottom": 0.1},
+            on_release=self.open_add_note_screen
+        )
+        self.main_screen.add_widget(add_note_button)
+
         return self.screen_manager
 
     def update_rect(self, instance, value):
@@ -108,7 +119,7 @@ class NotesApp(MDApp):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
-    def open_add_note_screen(self):
+    def open_add_note_screen(self, *args):
         self.screen_manager.current = 'add_note'
 
     def add_note_callback(self, title, body):

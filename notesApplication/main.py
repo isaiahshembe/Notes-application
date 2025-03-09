@@ -13,7 +13,6 @@ from kivy.uix.screenmanager import ScreenManager
 import sqlite3
 from kivy.graphics import Color, RoundedRectangle
 from kivymd.uix.button import MDRaisedButton
-from kivy.uix.floatlayout import FloatLayout  # Added FloatLayout
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -37,21 +36,11 @@ class NotesApp(MDApp):
 
     def build(self):
         self.screen_manager = ScreenManager()
+
+        # -----------------------
+        # Main Screen
+        # -----------------------
         self.main_screen = MDScreen(name='main')
-
-        # Create a FloatLayout to position the search bar on the right
-        float_layout = FloatLayout()
-
-        # Search bar with reduced height and positioned on the right
-        self.search_bar = TextInput(
-            hint_text='Search notes...',
-            size_hint=(None, None),
-            width=200,  # You can adjust the width to your preference
-            height=30,  # Reduced height
-            multiline=False,
-            on_text=self.filter_notes,
-            pos_hint={"right": 1, "top": 1}  # Positions it at the top-right
-        )
 
         top_app_bar = MDTopAppBar(
             title='Notes App',
@@ -61,7 +50,8 @@ class NotesApp(MDApp):
             pos_hint={"top": 1}
         )
         top_app_bar.left_action_items = [['menu', lambda x: self.menu.open_menu(x)]]
-        top_app_bar.right_action_items = [["magnify", lambda x: self.toggle_search_bar()]]
+        # Open the search screen when tapping the magnify icon
+        top_app_bar.right_action_items = [["magnify", lambda x: self.open_search_screen()]]
 
         self.menu = Menu(self.open_add_note_screen)
 
@@ -72,7 +62,6 @@ class NotesApp(MDApp):
             pos_hint={"top": 0.87},
             padding=(12, 0, 12, 12)
         )
-
         with content_layout.canvas.before:
             Color(0.9, 0.9, 0.9, 1)
             self.rect = RoundedRectangle(size=content_layout.size, pos=content_layout.pos, radius=[10, 10, 10, 10])
@@ -89,8 +78,60 @@ class NotesApp(MDApp):
 
         self.main_screen.add_widget(content_layout)
         self.main_screen.add_widget(top_app_bar)
-        self.main_screen.add_widget(self.search_bar)  # Add the search bar to the screen
 
+        # Floating add note button on the main screen
+        add_note_button = MDRaisedButton(
+            text="+",
+            size_hint=(None, None),
+            size=(200, 50),
+            pos_hint={"right": 0.98, "bottom": 0.1},
+            on_release=self.open_add_note_screen
+        )
+        self.main_screen.add_widget(add_note_button)
+
+        self.screen_manager.add_widget(self.main_screen)
+
+        # -----------------------
+        # Search Screen
+        # -----------------------
+        self.search_screen = MDScreen(name='search')
+        search_layout = BoxLayout(orientation='vertical')
+
+        # Top app bar for search screen with a back arrow
+        search_top_app_bar = MDTopAppBar(
+            title='Search',
+            anchor_title='left',
+            size_hint_y=None,
+            height=56,
+            pos_hint={"top": 1}
+        )
+        search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
+        search_layout.add_widget(search_top_app_bar)
+
+        # Full-width search bar
+        self.search_bar = TextInput(
+            hint_text='Search notes...',
+            size_hint=(1, None),
+            height=40,
+            multiline=False,
+        )
+        # Bind changes to update search results dynamically
+        self.search_bar.bind(text=self.filter_search_results)
+        search_layout.add_widget(self.search_bar)
+
+        # Scrollable area for search results
+        scroll_view_search = ScrollView(size_hint=(1, 1))
+        self.search_results_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)
+        self.search_results_layout.bind(minimum_height=self.search_results_layout.setter('height'))
+        scroll_view_search.add_widget(self.search_results_layout)
+        search_layout.add_widget(scroll_view_search)
+
+        self.search_screen.add_widget(search_layout)
+        self.screen_manager.add_widget(self.search_screen)
+
+        # -----------------------
+        # Additional Screens
+        # -----------------------
         self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
         self.add_note_screen.name = 'add_note'
         self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
@@ -98,19 +139,9 @@ class NotesApp(MDApp):
         self.share_note_screen = ShareNoteScreen(None, None, None, self.update_share_callback, self.screen_manager)
         self.share_note_screen.name = 'share_note'
 
-        self.screen_manager.add_widget(self.main_screen)
         self.screen_manager.add_widget(self.add_note_screen)
         self.screen_manager.add_widget(self.edit_note_screen)
         self.screen_manager.add_widget(self.share_note_screen)
-
-        add_note_button = MDRaisedButton(
-            text="+",
-            size_hint=(None, None),
-            size=(200, 50),
-            pos_hint={"right": 1, "bottom": 0.1},
-            on_release=self.open_add_note_screen
-        )
-        self.main_screen.add_widget(add_note_button)
 
         return self.screen_manager
 
@@ -118,17 +149,16 @@ class NotesApp(MDApp):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
-    def toggle_search_bar(self):
-        if self.search_bar.opacity == 0:
-            self.search_bar.opacity = 1
-        else:
-            self.search_bar.opacity = 0
-            self.search_bar.text = ""
-            self.filter_notes()
+    def open_search_screen(self, *args):
+        # Refresh notes and clear previous search text/results
+        self.load_notes()
+        self.search_bar.text = ""
+        self.search_results_layout.clear_widgets()
+        self.screen_manager.current = 'search'
 
-    def filter_notes(self, *args):
+    def filter_search_results(self, instance, value):
         search_text = self.search_bar.text.lower()
-        self.notes_layout.clear_widgets()
+        self.search_results_layout.clear_widgets()
         for note in self.notes:
             if search_text in note[1].lower() or search_text in note[2].lower():
                 note_widget = NoteWidget(
@@ -139,7 +169,7 @@ class NotesApp(MDApp):
                     edit_callback=self.open_edit_note_screen,
                     share_callback=self.open_share_note_screen,
                 )
-                self.notes_layout.add_widget(note_widget)
+                self.search_results_layout.add_widget(note_widget)
 
     def open_add_note_screen(self, *args):
         self.screen_manager.current = 'add_note'
@@ -152,6 +182,19 @@ class NotesApp(MDApp):
         self.notes = self.cursor.fetchall()
         self.filter_notes()
 
+    def filter_notes(self):
+        self.notes_layout.clear_widgets()
+        for note in self.notes:
+            note_widget = NoteWidget(
+                note_id=note[0],
+                title=note[1],
+                body=note[2],
+                delete_callback=self.delete_note,
+                edit_callback=self.open_edit_note_screen,
+                share_callback=self.open_share_note_screen,
+            )
+            self.notes_layout.add_widget(note_widget)
+
     def save_note(self, title, body):
         self.cursor.execute('INSERT INTO notes (title, body) VALUES (?, ?)', (title, body))
         self.conn.commit()
@@ -161,8 +204,8 @@ class NotesApp(MDApp):
         self.cursor.execute('DELETE FROM notes WHERE id = ?', (note_id,))
         self.conn.commit()
         self.notes = [note for note in self.notes if note[0] != note_id]
-        self.notes_layout.remove_widget(note_widget)
-        self.notes_layout.height -= note_widget.height
+        if note_widget.parent:
+            note_widget.parent.remove_widget(note_widget)
 
     def open_edit_note_screen(self, note_id, title, body):
         self.edit_note_screen.note_id = note_id

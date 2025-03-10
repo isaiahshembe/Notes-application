@@ -82,29 +82,43 @@ class ShareNoteScreen(MDScreen):
         self.add_widget(top_app_bar)  # Fixed App Bar
 
     def share_on_facebook(self):
-        share_on_facebook(self.note_id)
-        self.show_confirmation_dialog("Facebook")
+        try:
+            share_on_facebook(self.note_id)
+            self.show_confirmation_dialog("Facebook", success=True)
+        except Exception as e:
+            self.show_confirmation_dialog("Facebook", success=False)
 
     def share_on_twitter(self):
-        share_on_twitter(self.note_id)
-        self.show_confirmation_dialog("Twitter")
+        try:
+            share_on_twitter(self.note_id)
+            self.show_confirmation_dialog("Twitter", success=True)
+        except Exception as e:
+            self.show_confirmation_dialog("Twitter", success=False)
 
     def share_on_instagram(self):
-        share_on_instagram(self.note_id)
-        self.show_confirmation_dialog("Instagram")
+        try:
+            share_on_instagram(self.note_id)
+            self.show_confirmation_dialog("Instagram", success=True)
+        except Exception as e:
+            self.show_confirmation_dialog("Instagram", success=False)
 
     def share_on_whatsapp(self):
-        self.whatsapp_share.share_on_whatsapp(self.note_id, self.title, self.body, lambda: self.show_confirmation_dialog("WhatsApp"))
+        try:
+            self.whatsapp_share.share_on_whatsapp(self.note_id, self.title, self.body, lambda: self.show_confirmation_dialog("WhatsApp", success=True))
+        except Exception as e:
+            self.show_confirmation_dialog("WhatsApp", success=False)
 
-    def show_confirmation_dialog(self, platform):
+    def show_confirmation_dialog(self, platform, success):
         if not self.dialog:
+            dialog_text = f"Note shared on {platform}!"
+            if not success:
+                dialog_text = f"Failed to share on {platform}. Please try again."
+            
             self.dialog = MDDialog(
-                text=f"Note shared on {platform}!",
-                buttons=[
-                    MDFlatButton(
-                        text="OK", on_release=self.close_dialog
-                    ),
-                ],
+                text=dialog_text,
+                buttons=[MDFlatButton(
+                    text="OK", on_release=self.close_dialog
+                )],
             )
         self.dialog.open()
 

@@ -6,6 +6,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from text_widget import NoteWidget
 from menu import Menu
+from view_note import ViewNoteScreen
 from add_note import AddNoteScreen
 from edit_note import EditNoteScreen
 from share_note import ShareNoteScreen
@@ -25,7 +26,7 @@ class NotesApp(MDApp):
     def init_db(self):
         self.conn = sqlite3.connect('notes.db')
         self.cursor = self.conn.cursor()
-        self.cursor.execute('''
+        self.cursor.execute(''' 
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT,
@@ -138,10 +139,13 @@ class NotesApp(MDApp):
         self.edit_note_screen.name = 'edit_note'
         self.share_note_screen = ShareNoteScreen(None, None, None, self.update_share_callback, self.screen_manager)
         self.share_note_screen.name = 'share_note'
+        self.view_note_screen = ViewNoteScreen()  # Added for viewing a note
+        self.view_note_screen.name = 'view_note'
 
         self.screen_manager.add_widget(self.add_note_screen)
         self.screen_manager.add_widget(self.edit_note_screen)
         self.screen_manager.add_widget(self.share_note_screen)
+        self.screen_manager.add_widget(self.view_note_screen)
 
         return self.screen_manager
 
@@ -168,6 +172,7 @@ class NotesApp(MDApp):
                     delete_callback=self.delete_note,
                     edit_callback=self.open_edit_note_screen,
                     share_callback=self.open_share_note_screen,
+                    view_callback=self.open_view_note_screen  # added view callback
                 )
                 self.search_results_layout.add_widget(note_widget)
 
@@ -192,6 +197,7 @@ class NotesApp(MDApp):
                 delete_callback=self.delete_note,
                 edit_callback=self.open_edit_note_screen,
                 share_callback=self.open_share_note_screen,
+                view_callback=self.open_view_note_screen  # added view callback
             )
             self.notes_layout.add_widget(note_widget)
 
@@ -208,9 +214,11 @@ class NotesApp(MDApp):
             note_widget.parent.remove_widget(note_widget)
 
     def open_edit_note_screen(self, note_id, title, body):
+        print(f"Editing note {note_id}")  # Debugging print statement
         self.edit_note_screen.note_id = note_id
         self.edit_note_screen.title_field.text = title
         self.edit_note_screen.body_field.text = body
+        print(f"Switching to edit note screen...")
         self.screen_manager.current = 'edit_note'
 
     def update_note_callback(self, title, body, note_id):
@@ -220,10 +228,16 @@ class NotesApp(MDApp):
         self.screen_manager.current = 'main'
 
     def open_share_note_screen(self, note_id, title, body):
+        print(f"Sharing note {note_id}") 
         self.share_note_screen.note_id = note_id
         self.share_note_screen.title = title
         self.share_note_screen.body = body
         self.screen_manager.current = 'share_note'
+
+    def open_view_note_screen(self, note_id, title, body):
+        # Set up and display the selected note in the view note screen
+        self.view_note_screen.display_note(note_id, title, body)
+        self.screen_manager.current = 'view_note'
 
     def update_share_callback(self, *args):
         pass

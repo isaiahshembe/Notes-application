@@ -2,11 +2,13 @@ from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
-
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.widget import Widget
 from kivymd.uix.dialog import MDDialog
+from kivy.uix.screenmanager import ScreenManager
+import sqlite3
+
 
 class EditNoteScreen(MDScreen):
     def __init__(self, note_id, title, body, callback, screen_manager, conn, **kwargs):
@@ -17,27 +19,25 @@ class EditNoteScreen(MDScreen):
         self.conn = conn
         self.dialog = None
 
-        # Create a top app bar (Fixed at the top)
+        # Top App Bar
         top_app_bar = MDTopAppBar(
             title='Edit Note',
-            pos_hint={"top": 1},  # Keeps it fixed at the top
+            pos_hint={"top": 1},
             anchor_title='left',
-            md_bg_color=(0, 0.5, 1, 1),  # Blue color
+            md_bg_color=(0, 0.5, 1, 1),
             size_hint_y=None,
             height=56,
-            left_action_items=[['arrow-left', lambda x: self.go_back()]],  # Back button
+            left_action_items=[['arrow-left', lambda x: self.go_back()]],
         )
 
-        # Create a vertical layout for the content
+        # Content Layout
         content_layout = MDBoxLayout(
             orientation='vertical',
-            padding=20,  # Add padding for better spacing
-            spacing=20,  # Add space between elements
-            size_hint_y=None,  # Disable automatic sizing
+            padding=20,
+            spacing=20,
         )
-        content_layout.bind(minimum_height=content_layout.setter('height'))  # Adjust height dynamically
 
-        # Create fields for note title and body
+        # Title and Body Fields
         self.title_field = MDTextField(
             hint_text='Note Title',
             size_hint_x=1,
@@ -49,28 +49,28 @@ class EditNoteScreen(MDScreen):
             multiline=True,
             size_hint_x=1,
             height=200,
-            mode='rectangle',  # Makes it more prominent
+            mode='rectangle',
         )
 
-        # Create a save button (Centered)
+        # Save Button
         save_button = MDRaisedButton(
             text='Save Changes',
             size_hint=(None, None),
-            pos_hint={"center_x": 0.5},  # Center the button
+            pos_hint={"center_x": 0.5},
             on_press=lambda x: self.save_changes(),
         )
 
-        # Add widgets to the layout
+        # Add widgets to layout
         content_layout.add_widget(self.title_field)
         content_layout.add_widget(self.body_field)
         content_layout.add_widget(save_button)
-        content_layout.add_widget(Widget())  # Spacer for better alignment
+        content_layout.add_widget(Widget())
 
-        # Add the widgets to the screen
-        self.add_widget(content_layout)  # Content
-        self.add_widget(top_app_bar)  # Fixed App Bar
+        # Add to screen
+        self.add_widget(content_layout)
+        self.add_widget(top_app_bar)
 
-        # Update fields if title and body are provided
+        # Load existing title and body if provided
         if title is not None and body is not None:
             self.title_field.text = title
             self.body_field.text = body
@@ -79,13 +79,13 @@ class EditNoteScreen(MDScreen):
         title = self.title_field.text
         body = self.body_field.text
 
-        if title.strip() and body.strip():  # Ensure fields are not empty
+        if title.strip() and body.strip():  # Check if fields are filled
             self.update_note_in_db(title, body)
-            self.callback(title, body, self.note_id)
-            self.show_confirmation_dialog()
-
-        # Go back to the main screen
-        self.go_back()
+            self.callback(title, body, self.note_id)  # Call the callback function to update UI or list
+            self.show_confirmation_dialog()  # Show success dialog
+            self.go_back()  # Go back to main screen
+        else:
+            self.show_error_dialog("Both Title and Body are required!")
 
     def update_note_in_db(self, title, body):
         cursor = self.conn.cursor()
@@ -104,8 +104,50 @@ class EditNoteScreen(MDScreen):
             )
         self.dialog.open()
 
+    def show_error_dialog(self, message):
+        error_dialog = MDDialog(
+            text=message,
+            buttons=[
+                MDFlatButton(
+                    text="OK", on_release=lambda x: error_dialog.dismiss()
+                ),
+            ],
+        )
+        error_dialog.open()
+
     def close_dialog(self, obj):
         self.dialog.dismiss()
 
     def go_back(self):
         self.screen_manager.current = 'main'
+
+
+class NotesApp(MDApp):
+    def build(self):
+        self.conn = sqlite3.connect('notes.db')  # Your DB
+        self.screen_manager = ScreenManager()
+
+        def dummy_callback(title, body, note_id):
+            print(f"Updated Note {note_id}: {title} - {body}")
+
+        edit_note_screen = EditNoteScreen(
+            note_id=1,
+            title="Sample Note Title",
+            body="Sample Note Body",
+            callback=dummy_callback,
+            screen_manager=self.screen_manager,
+            conn=self.conn,
+            name='edit_note'
+        )
+
+        self.screen_manager.add_widget(edit_note_screen)
+        self.screen_manager.add_widget(MDScreen(name='main'))
+
+        return self.screen_manager
+
+    def on_stop(self):
+        self.conn.close()
+
+
+if __name__ == '__main__':
+    NotesApp().run()

@@ -7,6 +7,8 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.widget import Widget
 from kivymd.uix.dialog import MDDialog
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.screenmanager import ScreenManager
+import sqlite3
 
 
 class AddNoteScreen(MDScreen):
@@ -51,6 +53,7 @@ class AddNoteScreen(MDScreen):
             hint_text='Note Body',
             multiline=True,
             size_hint_x=1,
+            size_hint_y=None,  # Make sure height applies
             height=200,
             mode='rectangle',
         )
@@ -108,3 +111,40 @@ class AddNoteScreen(MDScreen):
 
     def go_back(self):
         self.screen_manager.current = 'main'
+
+
+# ------------------------- TEST RUN APP ------------------------- #
+
+if __name__ == '__main__':
+    class TestApp(MDApp):
+        def build(self):
+            self.conn = sqlite3.connect('notes.db')  # Creates the DB file if not there
+
+            # Create a basic ScreenManager with a 'main' screen and AddNoteScreen
+            self.screen_manager = ScreenManager()
+
+            # Dummy main screen to enable navigation back
+            main_screen = MDScreen(name='main')
+            self.screen_manager.add_widget(main_screen)
+
+            # Define a simple callback function for test
+            def test_callback(title, body):
+                print(f"Note saved: {title} - {body}")
+
+            # Add the AddNoteScreen
+            add_note_screen = AddNoteScreen(
+                callback=test_callback,
+                screen_manager=self.screen_manager,
+                conn=self.conn,
+                name='add_note'
+            )
+            self.screen_manager.add_widget(add_note_screen)
+
+            # Set the current screen to 'add_note' to display it first
+            self.screen_manager.current = 'add_note'
+            return self.screen_manager
+
+        def on_stop(self):
+            self.conn.close()  # Close connection when app stops
+
+    TestApp().run()

@@ -9,7 +9,6 @@ from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.core.window import Window
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.gridlayout import GridLayout
 
 
 # Function to add a note to the database
@@ -145,41 +144,56 @@ class MainPage(Screen):
         # Main layout
         layout = BoxLayout(orientation='vertical', padding=[10, 10, 10, 10], spacing=20)
 
-        # App bar at the top
-        app_bar = BoxLayout(size_hint_y=None, height=60, orientation='horizontal', padding=[10, 5], spacing=10)
+        # Header section
+        header = BoxLayout(size_hint_y=None, height=100, orientation='vertical', padding=[10, 5], spacing=10)
 
-        # Title label in the app bar
-        title_label = Label(text="Notes App", bold=True, font_size=26, color=(1, 1, 1, 1), size_hint_x=0.8)
-        app_bar.add_widget(title_label)
+        # Journal title
+        journal_title = Label(text="Journal", bold=True, font_size=32, color=(0, 0, 0, 1), size_hint_y=None, height=50)
+        header.add_widget(journal_title)
 
-        # Add the app bar to the layout
-        layout.add_widget(app_bar)
+        # Stats section (e.g., "Entry This Year", "Words Written", "Day Journaled")
+        stats = BoxLayout(size_hint_y=None, height=40, orientation='horizontal', spacing=10)
+        stats.add_widget(Label(text="Entry This Year", font_size=18, color=(0.5, 0.5, 0.5, 1)))
+        stats.add_widget(Label(text="Words Written", font_size=18, color=(0.5, 0.5, 0.5, 1)))
+        stats.add_widget(Label(text="Day Journaled", font_size=18, color=(0.5, 0.5, 0.5, 1)))
+        header.add_widget(stats)
 
-        # ScrollView for notes
+        layout.add_widget(header)
+
+        # ScrollView for entries
         scroll_view = ScrollView(size_hint=(1, 1), do_scroll_x=False)
 
-        # GridLayout for notes (2 columns)
-        self.notes_layout = GridLayout(cols=2, spacing=10, padding=[10, 10], size_hint_y=None)
-        self.notes_layout.bind(minimum_height=self.notes_layout.setter('height'))  # Allow scrolling
+        # Entries layout
+        self.entries_layout = BoxLayout(orientation='vertical', spacing=10, padding=[10, 10], size_hint_y=None)
+        self.entries_layout.bind(minimum_height=self.entries_layout.setter('height'))  # Allow scrolling
 
-        # Simulated Notes List (You will replace this with actual data from the database)
-        self.notes = [
-            {'id': 1, 'title': "Sample Note 1", 'body': "This is the first note."},
-            {'id': 2, 'title': "Sample Note 2", 'body': "This is the second note."},
-            {'id': 3, 'title': "Sample Note 3", 'body': "This is the third note."},
-            {'id': 4, 'title': "Sample Note 4", 'body': "This is the fourth note."}
+        # Simulated Entries (You will replace this with actual data from the database)
+        self.entries = [
+            {'title': "Today", 'body': "Make project adjustments"},
+            {'title': "Yesterday", 'body': "Reviewed project progress"},
+            {'title': "Last Week", 'body': "Started new project"}
         ]
 
-        # Add note cards to the layout
-        for note in self.notes:
-            note_card = Button(text=f"{note['title']}", size_hint_y=None, height=100, background_color=(0.1, 0.5, 0.9, 1), color=(1, 1, 1, 1))
-            with note_card.canvas.before:
-                Color(0.1, 0.5, 0.9, 1)  # Button background color
-                RoundedRectangle(size=note_card.size, pos=note_card.pos, radius=[10,])  # Rounded corners
-            note_card.bind(on_press=self.go_to_edit_note_page(note['id']))  # Bind to edit note
-            self.notes_layout.add_widget(note_card)
+        # Add entries to the layout
+        for entry in self.entries:
+            entry_card = BoxLayout(orientation='vertical', size_hint_y=None, height=80, padding=[10, 5], spacing=5)
+            with entry_card.canvas.before:
+                Color(1, 1, 1, 1)  # White background
+                RoundedRectangle(size=entry_card.size, pos=entry_card.pos, radius=[10,])  # Rounded corners
 
-        scroll_view.add_widget(self.notes_layout)
+            # Entry title
+            title_label = Label(text=entry['title'], font_size=20, color=(0, 0, 0, 1), size_hint_y=None, height=30, halign='left')
+            title_label.bind(size=title_label.setter('text_size'))  # Ensure text wraps
+            entry_card.add_widget(title_label)
+
+            # Entry body
+            body_label = Label(text=entry['body'], font_size=16, color=(0.5, 0.5, 0.5, 1), size_hint_y=None, height=30, halign='left')
+            body_label.bind(size=body_label.setter('text_size'))  # Ensure text wraps
+            entry_card.add_widget(body_label)
+
+            self.entries_layout.add_widget(entry_card)
+
+        scroll_view.add_widget(self.entries_layout)
         layout.add_widget(scroll_view)
 
         # Add a floating circular "Add Note" button
@@ -203,15 +217,6 @@ class MainPage(Screen):
     def _update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
-
-    def go_to_edit_note_page(self, note_id):
-        def inner(instance):
-            # Pass the note_id to the edit screen and navigate
-            edit_screen = self.manager.get_screen('edit_note_page')
-            edit_screen.note_id = note_id
-            edit_screen.load_note_data()  # Load the note data
-            self.manager.current = 'edit_note_page'
-        return inner
 
     def go_to_second_page(self, instance):
         self.manager.current = 'second_page'  # Switch to the second page to add a new note

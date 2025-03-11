@@ -93,8 +93,7 @@ class AddNoteScreen(MDScreen):
         self.title_input.text = ""
         self.body_input.text = ""
 
-<<<<<<< HEAD
-    # Clear the fields
+
         self.title_field.text = ''
         self.body_field.text = ''
 
@@ -124,7 +123,7 @@ class AddNoteScreen(MDScreen):
         self.dialog.dismiss()
 
     def go_back(self):
-=======
+
         # Navigate back to main screen
->>>>>>> fd54b1678861a5ccbeaaedfee43f67ce1dea6eef
+
         self.screen_manager.current = 'main'

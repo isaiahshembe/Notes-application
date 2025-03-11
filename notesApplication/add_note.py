@@ -5,6 +5,8 @@ from kivy.uix.textinput import TextInput
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.button import MDFloatingActionButton
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDFlatButton
 
 
 class AddNoteScreen(MDScreen):
@@ -13,6 +15,7 @@ class AddNoteScreen(MDScreen):
         self.add_note_callback = add_note_callback
         self.screen_manager = screen_manager
         self.conn = conn
+        self.dialog = None
 
         # Main layout (vertical)
         main_layout = BoxLayout(orientation='vertical')
@@ -29,7 +32,7 @@ class AddNoteScreen(MDScreen):
         )
         # Back arrow to return to main screen
         self.top_app_bar.left_action_items = [
-            ["arrow-left", lambda x: setattr(self.screen_manager, 'current', 'main')]
+            ["arrow-left", lambda x: self.go_back()]
         ]
         main_layout.add_widget(self.top_app_bar)
 
@@ -86,19 +89,19 @@ class AddNoteScreen(MDScreen):
         title = self.title_input.text.strip()
         body = self.body_input.text.strip()
 
-        # Call the callback that actually inserts into DB
-        self.add_note_callback(title, body)
+        # Ensure fields are not empty
+        if title and body:
+            # Call the callback that actually inserts into DB
+            self.add_note_callback(title, body)
 
-        # Clear the inputs
-        self.title_input.text = ""
-        self.body_input.text = ""
+            # Clear the inputs
+            self.title_input.text = ""
+            self.body_input.text = ""
 
-
-        self.title_field.text = ''
-        self.body_field.text = ''
-
-    # Go back to the main screen without adding duplicate notes
-        self.go_back()
+            # Navigate back to main screen
+            self.show_confirmation_dialog()
+        else:
+            print("Title and body cannot be empty.")
 
 
     def save_to_db(self, title, body):
@@ -121,9 +124,8 @@ class AddNoteScreen(MDScreen):
 
     def close_dialog(self, obj):
         self.dialog.dismiss()
+        self.go_back()
 
-    def go_back(self):
-
+    def go_back(self,obj=None):
         # Navigate back to main screen
-
         self.screen_manager.current = 'main'

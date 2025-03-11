@@ -77,12 +77,13 @@ class AddNoteScreen(MDScreen):
             self.save_to_db(title, body)
             self.show_confirmation_dialog()
 
-        # Clear the fields
+    # Clear the fields
         self.title_field.text = ''
         self.body_field.text = ''
 
-        # Go back to the main screen
+    # Go back to the main screen without adding duplicate notes
         self.go_back()
+
 
     def save_to_db(self, title, body):
         cursor = self.conn.cursor()

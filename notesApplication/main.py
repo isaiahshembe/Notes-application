@@ -4,15 +4,51 @@ from kivymd.uix.screen import MDScreen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
-from text_widget import NoteWidget
-from menu import Menu
-from add_note import AddNoteScreen
-from edit_note import EditNoteScreen
-from share_note import ShareNoteScreen
 from kivy.uix.screenmanager import ScreenManager
-import sqlite3
+from kivy.uix.colorpicker import ColorPicker
+from kivy.uix.button import Button
+from kivy.uix.label import Label
 from kivy.graphics import Color, RoundedRectangle
 from kivymd.uix.button import MDRaisedButton
+import sqlite3
+
+class NoteWidget(BoxLayout):
+    def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.note_id = note_id
+        self.add_widget(Label(text=title))
+        self.add_widget(Label(text=body))
+        delete_button = Button(text='Delete', on_release=lambda x: delete_callback(note_id, self))
+        edit_button = Button(text='Edit', on_release=lambda x: edit_callback(note_id, title, body))
+        share_button = Button(text='Share', on_release=lambda x: share_callback(note_id, title, body))
+        self.add_widget(delete_button)
+        self.add_widget(edit_button)
+        self.add_widget(share_button)
+
+class Menu(BoxLayout):
+    def __init__(self, open_customization_screen, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint = (0.2, 1)
+        self.pos_hint = {'top': 1}
+        self.add_widget(Button(text='Customization', on_release=open_customization_screen))
+
+class CustomizationScreen(MDScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        self.color_picker = ColorPicker()
+        layout.add_widget(self.color_picker)
+        self.apply_button = Button(text='Apply', size_hint_y=None, height=50)
+        self.apply_button.bind(on_release=self.apply_colors)
+        layout.add_widget(self.apply_button)
+        self.add_widget(layout)
+
+    def apply_colors(self, instance):
+        color = self.color_picker.color
+        MDApp.get_running_app().theme_cls.primary_palette = "Custom"
+        MDApp.get_running_app().theme_cls.primary_color = color
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -37,11 +73,8 @@ class NotesApp(MDApp):
     def build(self):
         self.screen_manager = ScreenManager()
 
-        # -----------------------
         # Main Screen
-        # -----------------------
         self.main_screen = MDScreen(name='main')
-
         top_app_bar = MDTopAppBar(
             title='Notes App',
             anchor_title='left',
@@ -50,12 +83,10 @@ class NotesApp(MDApp):
             pos_hint={"top": 1}
         )
         top_app_bar.left_action_items = [['menu', lambda x: self.menu.open_menu(x)]]
-        # Open the search screen when tapping the magnify icon
         top_app_bar.right_action_items = [["magnify", lambda x: self.open_search_screen()]]
 
-        self.menu = Menu(self.open_add_note_screen)
+        self.menu = Menu(self.open_customization_screen)
 
-        # Main content layout
         content_layout = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -79,7 +110,6 @@ class NotesApp(MDApp):
         self.main_screen.add_widget(content_layout)
         self.main_screen.add_widget(top_app_bar)
 
-        # Floating add note button on the main screen
         add_note_button = MDRaisedButton(
             text="+",
             size_hint=(None, None),
@@ -91,66 +121,20 @@ class NotesApp(MDApp):
 
         self.screen_manager.add_widget(self.main_screen)
 
-        # -----------------------
-        # Search Screen
-        # -----------------------
-        self.search_screen = MDScreen(name='search')
-        search_layout = BoxLayout(orientation='vertical')
-
-        # Top app bar for search screen with a back arrow
-        search_top_app_bar = MDTopAppBar(
-            title='Search',
-            anchor_title='left',
-            size_hint_y=None,
-            height=56,
-            pos_hint={"top": 1}
-        )
-        search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
-        search_layout.add_widget(search_top_app_bar)
-
-        # Full-width search bar
-        self.search_bar = TextInput(
-            hint_text='Search notes...',
-            size_hint=(1, None),
-            height=40,
-            multiline=False,
-        )
-        # Bind changes to update search results dynamically
-        self.search_bar.bind(text=self.filter_search_results)
-        search_layout.add_widget(self.search_bar)
-
-        # Scrollable area for search results
-        scroll_view_search = ScrollView(size_hint=(1, 1))
-        self.search_results_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)
-        self.search_results_layout.bind(minimum_height=self.search_results_layout.setter('height'))
-        scroll_view_search.add_widget(self.search_results_layout)
-        search_layout.add_widget(scroll_view_search)
-
-        self.search_screen.add_widget(search_layout)
-        self.screen_manager.add_widget(self.search_screen)
-
-        # -----------------------
-        # Additional Screens
-        # -----------------------
-        self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
-        self.add_note_screen.name = 'add_note'
-        self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
-        self.edit_note_screen.name = 'edit_note'
-        self.share_note_screen = ShareNoteScreen(None, None, None, self.update_share_callback, self.screen_manager)
-        self.share_note_screen.name = 'share_note'
-
-        self.screen_manager.add_widget(self.add_note_screen)
-        self.screen_manager.add_widget(self.edit_note_screen)
-        self.screen_manager.add_widget(self.share_note_screen)
+        # Customization Screen
+        self.customization_screen = CustomizationScreen(name='customization')
+        self.screen_manager.add_widget(self.customization_screen)
 
         return self.screen_manager
+
+    def open_customization_screen(self, *args):
+        self.screen_manager.current = 'customization'
 
     def update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
 
     def open_search_screen(self, *args):
-        # Refresh notes and clear previous search text/results
         self.load_notes()
         self.search_bar.text = ""
         self.search_results_layout.clear_widgets()

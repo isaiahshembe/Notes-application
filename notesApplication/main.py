@@ -4,51 +4,15 @@ from kivymd.uix.screen import MDScreen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
+from text_widget import NoteWidget
+from menu import Menu
+from add_note import AddNoteScreen
+from edit_note import EditNoteScreen
+from share_note import ShareNoteScreen
 from kivy.uix.screenmanager import ScreenManager
-from kivy.uix.colorpicker import ColorPicker
-from kivy.uix.button import Button
-from kivy.uix.label import Label
+import sqlite3
 from kivy.graphics import Color, RoundedRectangle
 from kivymd.uix.button import MDRaisedButton
-import sqlite3
-
-class NoteWidget(BoxLayout):
-    def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.note_id = note_id
-        self.add_widget(Label(text=title))
-        self.add_widget(Label(text=body))
-        delete_button = Button(text='Delete', on_release=lambda x: delete_callback(note_id, self))
-        edit_button = Button(text='Edit', on_release=lambda x: edit_callback(note_id, title, body))
-        share_button = Button(text='Share', on_release=lambda x: share_callback(note_id, title, body))
-        self.add_widget(delete_button)
-        self.add_widget(edit_button)
-        self.add_widget(share_button)
-
-class Menu(BoxLayout):
-    def __init__(self, open_customization_screen, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'vertical'
-        self.size_hint = (0.2, 1)
-        self.pos_hint = {'top': 1}
-        self.add_widget(Button(text='Customization', on_release=open_customization_screen))
-
-class CustomizationScreen(MDScreen):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
-        self.color_picker = ColorPicker()
-        layout.add_widget(self.color_picker)
-        self.apply_button = Button(text='Apply', size_hint_y=None, height=50)
-        self.apply_button.bind(on_release=self.apply_colors)
-        layout.add_widget(self.apply_button)
-        self.add_widget(layout)
-
-    def apply_colors(self, instance):
-        color = self.color_picker.color
-        MDApp.get_running_app().theme_cls.primary_palette = "Custom"
-        MDApp.get_running_app().theme_cls.primary_color = color
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -57,11 +21,12 @@ class NotesApp(MDApp):
         self.cursor = None
         self.init_db()
         self.notes = []  # Store notes for filtering
+        self.whatsapp_share = WhatsAppShare()
 
     def init_db(self):
         self.conn = sqlite3.connect('notes.db')
         self.cursor = self.conn.cursor()
-        self.cursor.execute('''
+        self.cursor.execute(''' 
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT,
@@ -75,12 +40,14 @@ class NotesApp(MDApp):
 
         # Main Screen
         self.main_screen = MDScreen(name='main')
+
         top_app_bar = MDTopAppBar(
             title='Notes App',
             anchor_title='left',
             size_hint_y=None,
-            height=56,
-            pos_hint={"top": 1}
+            height=dp(56),
+            pos_hint={"top": 1},
+            md_bg_color=get_color_from_hex("#2196F3")
         )
         top_app_bar.left_action_items = [['menu', lambda x: self.menu.open_menu(x)]]
         top_app_bar.right_action_items = [["magnify", lambda x: self.open_search_screen()]]
@@ -91,39 +58,87 @@ class NotesApp(MDApp):
             orientation='vertical',
             size_hint=(1, 1),
             pos_hint={"top": 0.87},
-            padding=(12, 0, 12, 12)
+            padding=dp(12),
+            spacing=dp(12)
         )
-        with content_layout.canvas.before:
-            Color(0.9, 0.9, 0.9, 1)
-            self.rect = RoundedRectangle(size=content_layout.size, pos=content_layout.pos, radius=[10, 10, 10, 10])
-        content_layout.bind(size=self.update_rect, pos=self.update_rect)
 
+        # Scrollable area for notes
         scroll_view = ScrollView(size_hint=(1, 1))
-        self.notes_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)
+        self.notes_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(12))
         self.notes_layout.bind(minimum_height=self.notes_layout.setter('height'))
 
         self.load_notes()
-
         scroll_view.add_widget(self.notes_layout)
         content_layout.add_widget(scroll_view)
 
+        self.main_screen.add_widget(header)
         self.main_screen.add_widget(content_layout)
         self.main_screen.add_widget(top_app_bar)
 
+        # Floating add note button on the main screen
         add_note_button = MDRaisedButton(
             text="+",
             size_hint=(None, None),
-            size=(200, 50),
+            size=(dp(56), dp(56)),
             pos_hint={"right": 0.98, "bottom": 0.1},
+            md_bg_color=get_color_from_hex("#03DAC6"),
             on_release=self.open_add_note_screen
         )
         self.main_screen.add_widget(add_note_button)
 
         self.screen_manager.add_widget(self.main_screen)
 
-        # Customization Screen
-        self.customization_screen = CustomizationScreen(name='customization')
-        self.screen_manager.add_widget(self.customization_screen)
+        # -----------------------
+        # Search Screen
+        # -----------------------
+        self.search_screen = MDScreen(name='search')
+        search_layout = BoxLayout(orientation='vertical')
+
+        # Top app bar for search screen with a back arrow
+        search_top_app_bar = MDTopAppBar(
+            title='Search',
+            anchor_title='left',
+            size_hint_y=None,
+            height=56,
+            pos_hint={"top": 1}
+        )
+        search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
+        search_layout.add_widget(search_top_app_bar)
+
+        # Full-width search bar
+        self.search_bar = TextInput(
+            hint_text='Search notes...',
+            size_hint=(1, None),
+            height=40,
+            multiline=False,
+        )
+        # Bind changes to update search results dynamically
+        self.search_bar.bind(text=self.filter_search_results)
+        search_layout.add_widget(self.search_bar)
+
+        # Scrollable area for search results
+        scroll_view_search = ScrollView(size_hint=(1, 1))
+        self.search_results_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)
+        self.search_results_layout.bind(minimum_height=self.search_results_layout.setter('height'))
+        scroll_view_search.add_widget(self.search_results_layout)
+        search_layout.add_widget(scroll_view_search)
+
+        self.search_screen.add_widget(search_layout)
+        self.screen_manager.add_widget(self.search_screen)
+
+        # -----------------------
+        # Additional Screens
+        # -----------------------
+        self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
+        self.add_note_screen.name = 'add_note'
+        self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
+        self.edit_note_screen.name = 'edit_note'
+        self.share_note_screen = ShareNoteScreen(None, None, None, self.update_share_callback, self.screen_manager)
+        self.share_note_screen.name = 'share_note'
+
+        self.screen_manager.add_widget(self.add_note_screen)
+        self.screen_manager.add_widget(self.edit_note_screen)
+        self.screen_manager.add_widget(self.share_note_screen)
 
         return self.screen_manager
 
@@ -152,6 +167,7 @@ class NotesApp(MDApp):
                     delete_callback=self.delete_note,
                     edit_callback=self.open_edit_note_screen,
                     share_callback=self.open_share_note_screen,
+                    view_callback=self.open_view_note_screen
                 )
                 self.search_results_layout.add_widget(note_widget)
 
@@ -176,6 +192,7 @@ class NotesApp(MDApp):
                 delete_callback=self.delete_note,
                 edit_callback=self.open_edit_note_screen,
                 share_callback=self.open_share_note_screen,
+                view_callback=self.open_view_note_screen
             )
             self.notes_layout.add_widget(note_widget)
 
@@ -203,14 +220,77 @@ class NotesApp(MDApp):
         self.load_notes()
         self.screen_manager.current = 'main'
 
-    def open_share_note_screen(self, note_id, title, body):
-        self.share_note_screen.note_id = note_id
-        self.share_note_screen.title = title
-        self.share_note_screen.body = body
-        self.screen_manager.current = 'share_note'
+    def open_view_note_screen(self, note_id, title, body):
+        self.view_note_screen.display_note(note_id, title, body)
+        self.screen_manager.current = 'view_note'
 
-    def update_share_callback(self, *args):
-        pass
+    def open_share_note_screen(self, note_id, title, body):
+        # Instead of switching to a separate screen, open a dropdown menu
+        self.current_share_note = {'id': note_id, 'title': title, 'body': body}
+
+        menu_items = [
+            {
+                "text": "Share via Facebook",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.share_option_selected("Facebook")
+            },
+            {
+                "text": "Share via Twitter",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.share_option_selected("Twitter")
+            },
+            {
+                "text": "Share via Instagram",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.share_option_selected("Instagram")
+            },
+            {
+                "text": "Share via WhatsApp",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.share_option_selected("WhatsApp")
+            },
+        ]
+
+        self.share_menu = MDDropdownMenu(
+            caller=self.screen_manager.get_screen('main'),
+            items=menu_items,
+            width_mult=4,
+        )
+        self.share_menu.open()
+
+    def share_option_selected(self, platform):
+        self.share_menu.dismiss()
+
+        note_id = self.current_share_note['id']
+        title = self.current_share_note['title']
+        body = self.current_share_note['body']
+
+        if platform == "Facebook":
+            try:
+                share_on_facebook(note_id)
+                print("Shared on Facebook")
+            except Exception as e:
+                print("Failed to share on Facebook:", e)
+        elif platform == "Twitter":
+            try:
+                share_on_twitter(note_id)
+                print("Shared on Twitter")
+            except Exception as e:
+                print("Failed to share on Twitter:", e)
+        elif platform == "Instagram":
+            try:
+                share_on_instagram(note_id)
+                print("Shared on Instagram")
+            except Exception as e:
+                print("Failed to share on Instagram:", e)
+        elif platform == "WhatsApp":
+            try:
+                self.whatsapp_share.share_on_whatsapp(
+                    note_id, title, body, lambda: print("Shared on WhatsApp")
+                )
+            except Exception as e:
+                print("Failed to share on WhatsApp:", e)
+
 
 if __name__ == '__main__':
     NotesApp().run()

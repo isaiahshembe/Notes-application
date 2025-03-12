@@ -1,95 +1,108 @@
-from kivymd.app import MDApp
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.button import MDRaisedButton, MDFlatButton
-from kivymd.uix.toolbar import MDTopAppBar
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.uix.widget import Widget
-from kivymd.uix.dialog import MDDialog
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.screenmanager import ScreenManager
-import sqlite3
+from kivy.uix.textinput import TextInput
+
+from kivymd.uix.screen import MDScreen
+from kivymd.uix.toolbar import MDTopAppBar
+from kivymd.uix.button import MDFloatingActionButton
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDFlatButton
 
 
 class AddNoteScreen(MDScreen):
-    def __init__(self, callback, screen_manager, conn, **kwargs):
+    def __init__(self, add_note_callback, screen_manager, conn, **kwargs):
         super().__init__(**kwargs)
-        self.callback = callback
+        self.add_note_callback = add_note_callback
         self.screen_manager = screen_manager
         self.conn = conn
         self.dialog = None
 
-        # Create a top app bar (Fixed at the top)
-        top_app_bar = MDTopAppBar(
-            title='Add Note',
-            pos_hint={"top": 1},
+        # Main layout (vertical)
+        main_layout = BoxLayout(orientation='vertical')
+
+        # --------------------------------------------------
+        # Top App Bar
+        # --------------------------------------------------
+        self.top_app_bar = MDTopAppBar(
+            title="Add Note",
             anchor_title='left',
-            md_bg_color=(0, 0.5, 1, 1),  # Blue color
             size_hint_y=None,
             height=56,
-            left_action_items=[['arrow-left', lambda x: self.go_back()]],  # Back button
+            pos_hint={"top": 1},
         )
+        # Back arrow to return to main screen
+        self.top_app_bar.left_action_items = [
+            ["arrow-left", lambda x: self.go_back()]
+        ]
+        main_layout.add_widget(self.top_app_bar)
 
-        # Scrollable Content Layout
-        scroll_view = ScrollView()
-
-        content_layout = MDBoxLayout(
+        # --------------------------------------------------
+        # Scrollable area for note inputs
+        # --------------------------------------------------
+        scroll_view = ScrollView(size_hint=(1, 1))
+        scroll_layout = BoxLayout(
             orientation='vertical',
-            padding=20,
-            spacing=20,
-            size_hint_y=None,
+            padding=12,
+            spacing=12,
+            size_hint_y=None
         )
-        content_layout.bind(minimum_height=content_layout.setter('height'))
+        scroll_layout.bind(minimum_height=scroll_layout.setter('height'))
 
-        # Create fields for note title and body
-        self.title_field = MDTextField(
-            hint_text='Note Title',
-            size_hint_x=1,
+        # Title input
+        self.title_input = TextInput(
+            hint_text="Title",
+            size_hint=(1, None),
+            height=48,
+            multiline=False,
             font_size=18,
-            mode="rectangle",
         )
+        scroll_layout.add_widget(self.title_input)
 
-        self.body_field = MDTextField(
-            hint_text='Note Body',
+        # Body input
+        self.body_input = TextInput(
+            hint_text="Type something...",
+            size_hint=(1, None),
+            height=300,
             multiline=True,
-            size_hint_x=1,
-            size_hint_y=None,  # Make sure height applies
-            height=200,
-            mode='rectangle',
+            font_size=16
         )
+        scroll_layout.add_widget(self.body_input)
 
-        # Create a save button
-        save_button = MDRaisedButton(
-            text='Save Note',
-            size_hint=(None, None),
-            pos_hint={"center_x": 0.5},
-            on_press=lambda x: self.save_note(),
-        )
-
-        # Add widgets to the layout
-        content_layout.add_widget(self.title_field)
-        content_layout.add_widget(self.body_field)
-        content_layout.add_widget(save_button)
-        content_layout.add_widget(Widget())  # Spacer
-
-        scroll_view.add_widget(content_layout)
-
-        # Create the final layout with top bar and content
-        main_layout = MDBoxLayout(orientation='vertical')
-        main_layout.add_widget(top_app_bar)
+        scroll_view.add_widget(scroll_layout)
         main_layout.add_widget(scroll_view)
 
+        # --------------------------------------------------
+        # Floating "Save" Button
+        # --------------------------------------------------
+        self.save_button = MDFloatingActionButton(
+            icon="content-save",
+            pos_hint={"right": 0.95, "bottom": 0.05},
+            on_release=self.save_note
+        )
+        main_layout.add_widget(self.save_button)
+
+        # Add the main layout to the screen
         self.add_widget(main_layout)
 
-    def save_note(self):
-        title = self.title_field.text.strip()
-        body = self.body_field.text.strip()
+    def save_note(self, instance):
+        """Save the note and return to main screen."""
+        title = self.title_input.text.strip()
+        body = self.body_input.text.strip()
 
+        # Ensure fields are not empty
         if title and body:
-            self.save_to_db(title, body)
+            # Call the callback that actually inserts into DB
+            self.add_note_callback(title, body)
+
+            # Clear the inputs
+            self.title_input.text = ""
+            self.body_input.text = ""
+
+            # Navigate back to main screen
             self.show_confirmation_dialog()
-            self.title_field.text = ''
-            self.body_field.text = ''
+        else:
+            print("Title and body cannot be empty.")
+
 
     def save_to_db(self, title, body):
         cursor = self.conn.cursor()
@@ -101,7 +114,11 @@ class AddNoteScreen(MDScreen):
         if not self.dialog:
             self.dialog = MDDialog(
                 text="Note saved successfully!",
-                buttons=[MDFlatButton(text="OK", on_release=self.close_dialog)],
+                buttons=[
+                    MDFlatButton(
+                        text="OK", on_release=self.close_dialog
+                    ),
+                ],
             )
         self.dialog.open()
 
@@ -109,42 +126,6 @@ class AddNoteScreen(MDScreen):
         self.dialog.dismiss()
         self.go_back()
 
-    def go_back(self):
+    def go_back(self,obj=None):
+        # Navigate back to main screen
         self.screen_manager.current = 'main'
-
-
-# ------------------------- TEST RUN APP ------------------------- #
-
-if __name__ == '__main__':
-    class TestApp(MDApp):
-        def build(self):
-            self.conn = sqlite3.connect('notes.db')  # Creates the DB file if not there
-
-            # Create a basic ScreenManager with a 'main' screen and AddNoteScreen
-            self.screen_manager = ScreenManager()
-
-            # Dummy main screen to enable navigation back
-            main_screen = MDScreen(name='main')
-            self.screen_manager.add_widget(main_screen)
-
-            # Define a simple callback function for test
-            def test_callback(title, body):
-                print(f"Note saved: {title} - {body}")
-
-            # Add the AddNoteScreen
-            add_note_screen = AddNoteScreen(
-                callback=test_callback,
-                screen_manager=self.screen_manager,
-                conn=self.conn,
-                name='add_note'
-            )
-            self.screen_manager.add_widget(add_note_screen)
-
-            # Set the current screen to 'add_note' to display it first
-            self.screen_manager.current = 'add_note'
-            return self.screen_manager
-
-        def on_stop(self):
-            self.conn.close()  # Close connection when app stops
-
-    TestApp().run()

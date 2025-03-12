@@ -16,8 +16,9 @@ from kivymd.uix.button import MDRaisedButton
 from whatsapp_share import WhatsAppShare
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
-from view_note import ViewNoteScreen  # Import the ViewNoteScreen
-from kivymd.uix.menu import MDDropdownMenu  # Import MDDropdownMenu
+from view_note import ViewNoteScreen
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.theming import ThemeManager  # Import ThemeManager
 
 # Placeholder functions for social media sharing
 def share_on_facebook(note_id):
@@ -37,6 +38,8 @@ class NotesApp(MDApp):
         self.init_db()
         self.notes = []  # Store notes for filtering
         self.whatsapp_share = WhatsAppShare()
+        self.theme_cls = ThemeManager()  # Initialize ThemeManager
+        self.dark_mode = False  # Track dark mode state
 
     def init_db(self):
         self.conn = sqlite3.connect('notes.db')
@@ -66,7 +69,10 @@ class NotesApp(MDApp):
             md_bg_color=get_color_from_hex("#2196F3")
         )
         top_app_bar.left_action_items = [['menu', lambda x: self.menu.open_menu(x)]]
-        top_app_bar.right_action_items = [["magnify", lambda x: self.open_search_screen()]]
+        top_app_bar.right_action_items = [
+            ["magnify", lambda x: self.open_search_screen()],
+            ["weather-night", lambda x: self.toggle_dark_mode()]  # Dark mode button
+        ]
 
         self.menu = Menu(self.open_customization_screen)
 
@@ -167,6 +173,19 @@ class NotesApp(MDApp):
 
         return self.screen_manager
 
+    def toggle_dark_mode(self):
+        """
+        Toggle between light and dark mode.
+        """
+        self.dark_mode = not self.dark_mode
+        if self.dark_mode:
+            self.theme_cls.theme_style = "Dark"  # Set dark mode
+            self.theme_cls.primary_palette = "BlueGray"  # Dark mode primary color
+        else:
+            self.theme_cls.theme_style = "Light"  # Set light mode
+            self.theme_cls.primary_palette = "Blue"  # Light mode primary color
+
+    # Rest of your methods remain unchanged...
     def update_share_callback(self, *args):
         """
         Placeholder method for handling share callback logic.

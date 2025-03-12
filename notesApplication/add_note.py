@@ -82,7 +82,7 @@ class AddNoteScreen(MDScreen):
 
         # Numbered circle button
         numbered_circle_button = Button(
-            text="Add Numbered Circle",
+            text="number",
             size_hint=(1, None),
             height=48,
             on_press=self.add_numbered_circle

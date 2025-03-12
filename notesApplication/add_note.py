@@ -17,6 +17,7 @@ class AddNoteScreen(MDScreen):
         self.screen_manager = screen_manager
         self.conn = conn
         self.dialog = None
+        self.circle_counter = 1  # Counter for numbered circles
 
         # Main layout (vertical)
         main_layout = BoxLayout(orientation='vertical')
@@ -79,6 +80,15 @@ class AddNoteScreen(MDScreen):
         table_creation_layout.add_widget(create_table_button)
         scroll_layout.add_widget(table_creation_layout)
 
+        # Numbered circle button
+        numbered_circle_button = Button(
+            text="Add Numbered Circle",
+            size_hint=(1, None),
+            height=48,
+            on_press=self.add_numbered_circle
+        )
+        scroll_layout.add_widget(numbered_circle_button)
+
         scroll_view.add_widget(scroll_layout)
         main_layout.add_widget(scroll_view)
 
@@ -96,7 +106,7 @@ class AddNoteScreen(MDScreen):
         self.add_widget(main_layout)
 
     def create_table(self, instance):
-        """Create a fully enclosed table in the body_input based on the specified rows and columns."""
+        """Create a fully enclosed table in the body_input and append it to the existing text."""
         try:
             rows = int(self.rows_input.text)
             columns = int(self.columns_input.text)
@@ -121,8 +131,26 @@ class AddNoteScreen(MDScreen):
             table += row_template
             table += horizontal_border
 
-        # Insert the table into the body_input
-        self.body_input.text = table
+        # Append the table to the existing text in the body_input
+        existing_text = self.body_input.text
+        self.body_input.text = existing_text + "\n" + table  # Add a newline before the table
+
+    def add_numbered_circle(self, instance):
+        """Add a numbered circle to the body_input at the current cursor position."""
+        # Get the current cursor position
+        cursor_pos = self.body_input.cursor_index()
+
+        # Insert the numbered circle at the cursor position
+        numbered_circle = f"① "  # Use a small circle with the current counter value
+        self.body_input.text = (
+            self.body_input.text[:cursor_pos] + numbered_circle + self.body_input.text[cursor_pos:]
+        )
+
+        # Move the cursor to the end of the inserted circle
+        self.body_input.cursor = (cursor_pos + len(numbered_circle), cursor_pos + len(numbered_circle))
+
+        # Increment the counter for the next circle
+        self.circle_counter += 1
 
     def save_note(self, instance):
         """Save the note and return to main screen."""

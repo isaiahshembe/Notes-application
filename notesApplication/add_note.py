@@ -1,6 +1,7 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.toolbar import MDTopAppBar
@@ -68,6 +69,16 @@ class AddNoteScreen(MDScreen):
         )
         scroll_layout.add_widget(self.body_input)
 
+        # Table creation inputs
+        table_creation_layout = BoxLayout(orientation='horizontal', size_hint=(1, None), height=48)
+        self.rows_input = TextInput(hint_text="Rows", size_hint=(0.4, 1), multiline=False)
+        self.columns_input = TextInput(hint_text="Columns", size_hint=(0.4, 1), multiline=False)
+        create_table_button = Button(text="Create Table", size_hint=(0.2, 1), on_press=self.create_table)
+        table_creation_layout.add_widget(self.rows_input)
+        table_creation_layout.add_widget(self.columns_input)
+        table_creation_layout.add_widget(create_table_button)
+        scroll_layout.add_widget(table_creation_layout)
+
         scroll_view.add_widget(scroll_layout)
         main_layout.add_widget(scroll_view)
 
@@ -83,6 +94,35 @@ class AddNoteScreen(MDScreen):
 
         # Add the main layout to the screen
         self.add_widget(main_layout)
+
+    def create_table(self, instance):
+        """Create a fully enclosed table in the body_input based on the specified rows and columns."""
+        try:
+            rows = int(self.rows_input.text)
+            columns = int(self.columns_input.text)
+        except ValueError:
+            print("Please enter valid numbers for rows and columns.")
+            return
+
+        if rows <= 0 or columns <= 0:
+            print("Rows and columns must be greater than 0.")
+            return
+
+        # Generate the table structure
+        table = ""
+        # Create the horizontal border
+        horizontal_border = "+" + ("-" * 10 + "+") * columns + "\n"
+        # Create the row template
+        row_template = "|" + (" " * 10 + "|") * columns + "\n"
+
+        # Build the table
+        table += horizontal_border
+        for _ in range(rows):
+            table += row_template
+            table += horizontal_border
+
+        # Insert the table into the body_input
+        self.body_input.text = table
 
     def save_note(self, instance):
         """Save the note and return to main screen."""
@@ -102,7 +142,6 @@ class AddNoteScreen(MDScreen):
             self.show_confirmation_dialog()
         else:
             print("Title and body cannot be empty.")
-
 
     def save_to_db(self, title, body):
         cursor = self.conn.cursor()
@@ -126,6 +165,6 @@ class AddNoteScreen(MDScreen):
         self.dialog.dismiss()
         self.go_back()
 
-    def go_back(self,obj=None):
+    def go_back(self, obj=None):
         # Navigate back to main screen
         self.screen_manager.current = 'main'

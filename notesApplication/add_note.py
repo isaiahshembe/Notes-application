@@ -70,24 +70,23 @@ class AddNoteScreen(MDScreen):
         )
         scroll_layout.add_widget(self.body_input)
 
-        # Table creation inputs
-        table_creation_layout = BoxLayout(orientation='horizontal', size_hint=(1, None), height=48)
-        self.rows_input = TextInput(hint_text="Rows", size_hint=(0.4, 1), multiline=False)
-        self.columns_input = TextInput(hint_text="Columns", size_hint=(0.4, 1), multiline=False)
-        create_table_button = Button(text="Create Table", size_hint=(0.2, 1), on_press=self.create_table)
-        table_creation_layout.add_widget(self.rows_input)
-        table_creation_layout.add_widget(self.columns_input)
-        table_creation_layout.add_widget(create_table_button)
-        scroll_layout.add_widget(table_creation_layout)
-
         # Numbered circle button
         numbered_circle_button = Button(
-            text="number",
-            size_hint=(1, None),
-            height=48,
+            text="Number",
+            size_hint=(0.3, None),
+            height=40,
             on_press=self.add_numbered_circle
         )
         scroll_layout.add_widget(numbered_circle_button)
+
+        # Create table button
+        create_table_button = Button(
+            text="Create Table",
+            size_hint=(0.3, None),
+            height=40,
+            on_press=self.show_table_dialog
+        )
+        scroll_layout.add_widget(create_table_button)
 
         scroll_view.add_widget(scroll_layout)
         main_layout.add_widget(scroll_view)
@@ -105,8 +104,32 @@ class AddNoteScreen(MDScreen):
         # Add the main layout to the screen
         self.add_widget(main_layout)
 
+    def show_table_dialog(self, instance):
+        """Show a dialog to input rows and columns for table creation."""
+        self.dialog = MDDialog(
+            title="Create Table",
+            type="custom",
+            content_cls=BoxLayout(
+                orientation='vertical',
+                spacing=12,
+                size_hint_y=None,
+                height=100,
+            ),
+            buttons=[
+                MDFlatButton(text="CANCEL", on_release=lambda x: self.dialog.dismiss()),
+                MDFlatButton(text="CREATE", on_release=self.create_table),
+            ],
+        )
+        # Add rows and columns inputs to the dialog
+        self.rows_input = TextInput(hint_text="Rows", multiline=False)
+        self.columns_input = TextInput(hint_text="Columns", multiline=False)
+        self.dialog.content_cls.add_widget(self.rows_input)
+        self.dialog.content_cls.add_widget(self.columns_input)
+
+        self.dialog.open()
+
     def create_table(self, instance):
-        """Create a fully enclosed table in the body_input and append it to the existing text."""
+        """Create a table based on the rows and columns input."""
         try:
             rows = int(self.rows_input.text)
             columns = int(self.columns_input.text)
@@ -134,6 +157,9 @@ class AddNoteScreen(MDScreen):
         # Append the table to the existing text in the body_input
         existing_text = self.body_input.text
         self.body_input.text = existing_text + "\n" + table  # Add a newline before the table
+
+        # Close the dialog
+        self.dialog.dismiss()
 
     def add_numbered_circle(self, instance):
         """Add a numbered circle to the body_input at the current cursor position."""
@@ -170,12 +196,6 @@ class AddNoteScreen(MDScreen):
             self.show_confirmation_dialog()
         else:
             print("Title and body cannot be empty.")
-
-    def save_to_db(self, title, body):
-        cursor = self.conn.cursor()
-        cursor.execute('INSERT INTO notes (title, body) VALUES (?, ?)', (title, body))
-        self.conn.commit()
-        self.callback(title, body)
 
     def show_confirmation_dialog(self):
         if not self.dialog:

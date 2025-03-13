@@ -12,7 +12,7 @@ from share_note import ShareNoteScreen
 from kivy.uix.screenmanager import ScreenManager
 import sqlite3
 from kivy.graphics import Color, RoundedRectangle
-from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.button import MDIconButton, MDRaisedButton
 from whatsapp_share import WhatsAppShare
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
@@ -99,15 +99,14 @@ class NotesApp(MDApp):
         self.main_screen.add_widget(content_layout)
 
         # Floating add note button on the main screen
-        add_note_button = MDRaisedButton(
-            text="+",
+        add_note_button = MDIconButton(
+            icon="pencil",  # Use a pencil icon
             size_hint=(None, None),
             size=(dp(56), dp(56)),
             pos_hint={"center_x": 0.5, "bottom": 0.1},  # Centered horizontally, near the bottom
             md_bg_color=get_color_from_hex("#6A1B9A"),  # Dark purple color
-            theme_text_color="Custom",  # Ensure the text color is white
-            text_color=(1, 1, 1, 1),  # White text color
-            _radius=dp(28),  # Make the button circular
+            theme_text_color="Custom",  # Ensure the icon color is white
+            text_color=(1, 1, 1, 1),  # White icon color
             on_release=self.open_add_note_screen
         )
         self.main_screen.add_widget(add_note_button)
@@ -185,7 +184,6 @@ class NotesApp(MDApp):
             self.theme_cls.theme_style = "Light"  # Set light mode
             self.theme_cls.primary_palette = "Blue"  # Light mode primary color
 
-    # Rest of your methods remain unchanged...
     def update_share_callback(self, *args):
         """
         Placeholder method for handling share callback logic.

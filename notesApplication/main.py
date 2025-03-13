@@ -22,6 +22,7 @@ from menu import Menu
 from view_note import ViewNoteScreen
 from add_note import AddNoteScreen
 from edit_note import EditNoteScreen
+<<<<<<< HEAD
 
 # Share functionality imports (must be implemented elsewhere)
 from whatsapp_share import WhatsAppShare
@@ -116,6 +117,29 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
         # Call the view callback to open the view screen
         self.view_callback(self.note_id, self.title_label.text, self.body_label.text)
 
+=======
+from share_note import ShareNoteScreen
+from kivy.uix.screenmanager import ScreenManager
+import sqlite3
+from kivy.graphics import Color, RoundedRectangle
+from kivymd.uix.button import MDRaisedButton
+from whatsapp_share import WhatsAppShare
+from kivy.metrics import dp
+from kivy.utils import get_color_from_hex
+from view_note import ViewNoteScreen
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.theming import ThemeManager  # Import ThemeManager
+
+# Placeholder functions for social media sharing
+def share_on_facebook(note_id):
+    print(f"Sharing note {note_id} on Facebook (placeholder).")
+
+def share_on_twitter(note_id):
+    print(f"Sharing note {note_id} on Twitter (placeholder).")
+
+def share_on_instagram(note_id):
+    print(f"Sharing note {note_id} on Instagram (placeholder).")
+>>>>>>> f28c183f06b70f8fa68e30734f9cfb5e183d5af5
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -125,6 +149,8 @@ class NotesApp(MDApp):
         self.init_db()
         self.notes = []  # Store notes for filtering
         self.whatsapp_share = WhatsAppShare()
+        self.theme_cls = ThemeManager()  # Initialize ThemeManager
+        self.dark_mode = False  # Track dark mode state
 
     def init_db(self):
         self.conn = sqlite3.connect('notes.db')
@@ -146,6 +172,7 @@ class NotesApp(MDApp):
         # -----------------------
         self.main_screen = MDScreen(name='main')
 
+<<<<<<< HEAD
         # Header Section
         header = MDBoxLayout(
             orientation='vertical',
@@ -171,6 +198,9 @@ class NotesApp(MDApp):
         ))
 
         # Top App Bar
+=======
+        # Top App Bar (Header)
+>>>>>>> f28c183f06b70f8fa68e30734f9cfb5e183d5af5
         top_app_bar = MDTopAppBar(
             title='Notes App',
             anchor_title='left',
@@ -180,11 +210,18 @@ class NotesApp(MDApp):
             md_bg_color=get_color_from_hex("#2196F3")
         )
         top_app_bar.left_action_items = [['menu', lambda x: self.menu.open_menu(x)]]
-        top_app_bar.right_action_items = [["magnify", lambda x: self.open_search_screen()]]
+        top_app_bar.right_action_items = [
+            ["magnify", lambda x: self.open_search_screen()],
+            ["weather-night", lambda x: self.toggle_dark_mode()]  # Dark mode button
+        ]
 
         self.menu = Menu(self.open_add_note_screen)
 
+<<<<<<< HEAD
         # Main content layout
+=======
+        # Content Layout
+>>>>>>> f28c183f06b70f8fa68e30734f9cfb5e183d5af5
         content_layout = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -202,17 +239,20 @@ class NotesApp(MDApp):
         scroll_view.add_widget(self.notes_layout)
         content_layout.add_widget(scroll_view)
 
-        self.main_screen.add_widget(header)
-        self.main_screen.add_widget(content_layout)
+        # Add the top app bar and content layout to the main screen
         self.main_screen.add_widget(top_app_bar)
+        self.main_screen.add_widget(content_layout)
 
         # Floating add note button
         add_note_button = MDFloatingActionButton(
             icon="plus",
             size_hint=(None, None),
             size=(dp(56), dp(56)),
-            pos_hint={"right": 0.98, "bottom": 0.1},
-            md_bg_color=get_color_from_hex("#03DAC6"),
+            pos_hint={"center_x": 0.5, "bottom": 0.1},  # Centered horizontally, near the bottom
+            md_bg_color=get_color_from_hex("#6A1B9A"),  # Dark purple color
+            theme_text_color="Custom",  # Ensure the text color is white
+            text_color=(1, 1, 1, 1),  # White text color
+            _radius=dp(28),  # Make the button circular
             on_release=self.open_add_note_screen
         )
         self.main_screen.add_widget(add_note_button)
@@ -266,12 +306,45 @@ class NotesApp(MDApp):
         self.view_note_screen = ViewNoteScreen()
         self.view_note_screen.name = 'view_note'
 
+        # Add the ViewNoteScreen
+        self.view_note_screen = ViewNoteScreen()
+        self.view_note_screen.name = 'view_note'
+
         self.screen_manager.add_widget(self.add_note_screen)
         self.screen_manager.add_widget(self.edit_note_screen)
+<<<<<<< HEAD
+=======
+        self.screen_manager.add_widget(self.share_note_screen)
+>>>>>>> f28c183f06b70f8fa68e30734f9cfb5e183d5af5
         self.screen_manager.add_widget(self.view_note_screen)
 
         return self.screen_manager
 
+<<<<<<< HEAD
+=======
+    def toggle_dark_mode(self):
+        """
+        Toggle between light and dark mode.
+        """
+        self.dark_mode = not self.dark_mode
+        if self.dark_mode:
+            self.theme_cls.theme_style = "Dark"  # Set dark mode
+            self.theme_cls.primary_palette = "BlueGray"  # Dark mode primary color
+        else:
+            self.theme_cls.theme_style = "Light"  # Set light mode
+            self.theme_cls.primary_palette = "Blue"  # Light mode primary color
+
+    # Rest of your methods remain unchanged...
+    def update_share_callback(self, *args):
+        """
+        Placeholder method for handling share callback logic.
+        """
+        print("Share callback triggered")
+
+    def open_customization_screen(self, *args):
+        self.screen_manager.current = 'customization'
+
+>>>>>>> f28c183f06b70f8fa68e30734f9cfb5e183d5af5
     def update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
@@ -348,7 +421,7 @@ class NotesApp(MDApp):
         self.screen_manager.current = 'main'
 
     def open_view_note_screen(self, note_id, title, body):
-        self.view_note_screen.display_note(note_id, title, body)
+        self.view_note_screen.display_note(note_id, title, body, self.delete_note, self.open_edit_note_screen)
         self.screen_manager.current = 'view_note'
 
     def open_share_note_screen(self, note_id, title, body):
@@ -393,23 +466,11 @@ class NotesApp(MDApp):
         body = self.current_share_note['body']
 
         if platform == "Facebook":
-            try:
-                share_on_facebook(note_id)
-                print("Shared on Facebook")
-            except Exception as e:
-                print("Failed to share on Facebook:", e)
+            share_on_facebook(note_id)
         elif platform == "Twitter":
-            try:
-                share_on_twitter(note_id)
-                print("Shared on Twitter")
-            except Exception as e:
-                print("Failed to share on Twitter:", e)
+            share_on_twitter(note_id)
         elif platform == "Instagram":
-            try:
-                share_on_instagram(note_id)
-                print("Shared on Instagram")
-            except Exception as e:
-                print("Failed to share on Instagram:", e)
+            share_on_instagram(note_id)
         elif platform == "WhatsApp":
             try:
                 self.whatsapp_share.share_on_whatsapp(

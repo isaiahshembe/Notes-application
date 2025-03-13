@@ -1,9 +1,3 @@
-from kivy.clock import Clock
-from kivy.uix.label import Label
-from kivy.uix.image import Image
-from kivy.uix.boxlayout import BoxLayout
-from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle
 from kivymd.app import MDApp
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.screen import MDScreen
@@ -25,6 +19,11 @@ from kivy.utils import get_color_from_hex
 from view_note import ViewNoteScreen
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.theming import ThemeManager  # Import ThemeManager
+from kivy.clock import Clock
+from kivy.uix.label import Label
+from kivy.uix.image import Image
+from kivy.core.window import Window
+from kivy.graphics import Rectangle
 
 # Placeholder functions for social media sharing
 def share_on_facebook(note_id):
@@ -138,11 +137,68 @@ class NotesApp(MDApp):
 
         self.screen_manager.add_widget(self.main_screen)
 
+        # -----------------------
+        # Search Screen
+        # -----------------------
+        self.search_screen = MDScreen(name='search')
+        search_layout = BoxLayout(orientation='vertical')
+
+        # Top app bar for search screen with a back arrow
+        search_top_app_bar = MDTopAppBar(
+            title='Search',
+            anchor_title='left',
+            size_hint_y=None,
+            height=56,
+            pos_hint={"top": 1}
+        )
+        search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
+        search_layout.add_widget(search_top_app_bar)
+
+        # Full-width search bar
+        self.search_bar = TextInput(
+            hint_text='Search notes...',
+            size_hint=(1, None),
+            height=40,
+            multiline=False,
+        )
+        # Bind changes to update search results dynamically
+        self.search_bar.bind(text=self.filter_search_results)
+        search_layout.add_widget(self.search_bar)
+
+        # Scrollable area for search results
+        scroll_view_search = ScrollView(size_hint=(1, 1))
+        self.search_results_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)
+        self.search_results_layout.bind(minimum_height=self.search_results_layout.setter('height'))
+        scroll_view_search.add_widget(self.search_results_layout)
+        search_layout.add_widget(scroll_view_search)
+
+        self.search_screen.add_widget(search_layout)
+        self.screen_manager.add_widget(self.search_screen)
+
+        # -----------------------
+        # Additional Screens
+        # -----------------------
+        self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
+        self.add_note_screen.name = 'add_note'
+        self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
+        self.edit_note_screen.name = 'edit_note'
+        self.share_note_screen = ShareNoteScreen(None, None, None, self.update_share_callback, self.screen_manager)
+        self.share_note_screen.name = 'share_note'
+
+        # Add the ViewNoteScreen
+        self.view_note_screen = ViewNoteScreen()
+        self.view_note_screen.name = 'view_note'
+
+        self.screen_manager.add_widget(self.add_note_screen)
+        self.screen_manager.add_widget(self.edit_note_screen)
+        self.screen_manager.add_widget(self.share_note_screen)
+        self.screen_manager.add_widget(self.view_note_screen)
+
         # Set the welcome screen as the current screen
         self.screen_manager.current = 'welcome'
 
         # Schedule the transition to the main screen after 2 seconds
-        Clock.schedule_once(self.switch_to_main_screen, 10)
+        Clock.schedule_once(self.switch_to_main_screen, 20)
 
         return self.screen_manager
 

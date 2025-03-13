@@ -4,15 +4,118 @@ from kivymd.uix.screen import MDScreen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
+from kivy.graphics import Color, RoundedRectangle, Rectangle
+from kivymd.uix.button import MDRaisedButton, MDFloatingActionButton
+from kivymd.uix.menu import MDDropdownMenu
+from kivy.uix.screenmanager import ScreenManager
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.label import MDLabel
+from kivymd.uix.button import MDIconButton
+from kivy.uix.behaviors import ButtonBehavior
+from kivy.metrics import dp
+from kivy.utils import get_color_from_hex
+import sqlite3
+
+# These imports assume you have these modules implemented
 from text_widget import NoteWidget
 from menu import Menu
+from view_note import ViewNoteScreen
 from add_note import AddNoteScreen
 from edit_note import EditNoteScreen
-from share_note import ShareNoteScreen
-from kivy.uix.screenmanager import ScreenManager
-import sqlite3
-from kivy.graphics import Color, RoundedRectangle
-from kivymd.uix.button import MDRaisedButton
+
+# Share functionality imports (must be implemented elsewhere)
+from whatsapp_share import WhatsAppShare
+from facebook_share import share_on_facebook
+from twitter_share import share_on_twitter
+from instagram_share import share_on_instagram
+
+
+class NoteWidget(ButtonBehavior, MDBoxLayout):
+    def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, view_callback, **kwargs):
+        super().__init__(orientation='vertical', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
+        self.note_id = note_id
+        self.delete_callback = delete_callback
+        self.edit_callback = edit_callback
+        self.share_callback = share_callback
+        self.view_callback = view_callback
+
+        # Add a background with rounded corners
+        with self.canvas.before:
+            self.bg_color = Color(rgba=get_color_from_hex("#FFFFFF"))
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15),])
+
+        self.bind(size=self._update_rect, pos=self._update_rect)
+
+        # Note content
+        self.title_label = MDLabel(
+            text=title,
+            font_style="H6",
+            theme_text_color="Primary",
+            size_hint_y=None,
+            height=dp(30),
+            halign="left"
+        )
+        self.body_label = MDLabel(
+            text=body,
+            font_style="Body1",
+            theme_text_color="Secondary",
+            size_hint_y=None,
+            height=dp(70),
+            halign="left"
+        )
+
+        # Menu button (three-dot icon)
+        self.menu_button = MDIconButton(
+            icon="dots-vertical",
+            pos_hint={"right": 0.9, "top": 0.9},
+            theme_text_color="Custom",
+            text_color=get_color_from_hex("#000000")
+        )
+        self.menu_button.bind(on_release=self.open_menu)
+
+        self.add_widget(self.title_label)
+        self.add_widget(self.body_label)
+        self.add_widget(self.menu_button)
+
+        # Bind the tap event to open the view screen
+        self.bind(on_release=self.open_view_screen)
+
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+    def open_menu(self, instance):
+        # Create menu items
+        menu_items = [
+            {
+                "text": "Edit",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.edit_callback(self.note_id, self.title_label.text, self.body_label.text)
+            },
+            {
+                "text": "Share",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.share_callback(self.note_id, self.title_label.text, self.body_label.text)
+            },
+            {
+                "text": "Delete",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.delete_callback(self.note_id, self)
+            },
+        ]
+
+        # Open the dropdown menu
+        self.menu = MDDropdownMenu(
+            caller=instance,
+            items=menu_items,
+            width_mult=4,
+        )
+        self.menu.open()
+
+    def open_view_screen(self, *args):
+        # Call the view callback to open the view screen
+        self.view_callback(self.note_id, self.title_label.text, self.body_label.text)
+
 
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
@@ -38,9 +141,36 @@ class NotesApp(MDApp):
     def build(self):
         self.screen_manager = ScreenManager()
 
+        # -----------------------
         # Main Screen
+        # -----------------------
         self.main_screen = MDScreen(name='main')
 
+        # Header Section
+        header = MDBoxLayout(
+            orientation='vertical',
+            size_hint=(1, None),
+            height=dp(120),
+            padding=dp(20),
+            spacing=dp(10),
+            md_bg_color=get_color_from_hex("#2196F3")
+        )
+        header.add_widget(MDLabel(
+            text="Your Notes",
+            font_style="H4",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex("#FFFFFF"),
+            halign="center"
+        ))
+        header.add_widget(MDLabel(
+            text="All of your notes, in one place",
+            font_style="Subtitle1",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex("#FFFFFF"),
+            halign="center"
+        ))
+
+        # Top App Bar
         top_app_bar = MDTopAppBar(
             title='Notes App',
             anchor_title='left',
@@ -52,8 +182,9 @@ class NotesApp(MDApp):
         top_app_bar.left_action_items = [['menu', lambda x: self.menu.open_menu(x)]]
         top_app_bar.right_action_items = [["magnify", lambda x: self.open_search_screen()]]
 
-        self.menu = Menu(self.open_customization_screen)
+        self.menu = Menu(self.open_add_note_screen)
 
+        # Main content layout
         content_layout = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
@@ -75,9 +206,9 @@ class NotesApp(MDApp):
         self.main_screen.add_widget(content_layout)
         self.main_screen.add_widget(top_app_bar)
 
-        # Floating add note button on the main screen
-        add_note_button = MDRaisedButton(
-            text="+",
+        # Floating add note button
+        add_note_button = MDFloatingActionButton(
+            icon="plus",
             size_hint=(None, None),
             size=(dp(56), dp(56)),
             pos_hint={"right": 0.98, "bottom": 0.1},
@@ -94,31 +225,30 @@ class NotesApp(MDApp):
         self.search_screen = MDScreen(name='search')
         search_layout = BoxLayout(orientation='vertical')
 
-        # Top app bar for search screen with a back arrow
         search_top_app_bar = MDTopAppBar(
             title='Search',
             anchor_title='left',
             size_hint_y=None,
-            height=56,
-            pos_hint={"top": 1}
+            height=dp(56),
+            pos_hint={"top": 1},
+            md_bg_color=get_color_from_hex("#2196F3")
         )
         search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
         search_layout.add_widget(search_top_app_bar)
 
-        # Full-width search bar
         self.search_bar = TextInput(
             hint_text='Search notes...',
             size_hint=(1, None),
-            height=40,
+            height=dp(40),
             multiline=False,
+            background_color=get_color_from_hex("#FFFFFF"),
+            foreground_color=get_color_from_hex("#000000")
         )
-        # Bind changes to update search results dynamically
         self.search_bar.bind(text=self.filter_search_results)
         search_layout.add_widget(self.search_bar)
 
-        # Scrollable area for search results
         scroll_view_search = ScrollView(size_hint=(1, 1))
-        self.search_results_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)
+        self.search_results_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(12))
         self.search_results_layout.bind(minimum_height=self.search_results_layout.setter('height'))
         scroll_view_search.add_widget(self.search_results_layout)
         search_layout.add_widget(scroll_view_search)
@@ -133,17 +263,14 @@ class NotesApp(MDApp):
         self.add_note_screen.name = 'add_note'
         self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
         self.edit_note_screen.name = 'edit_note'
-        self.share_note_screen = ShareNoteScreen(None, None, None, self.update_share_callback, self.screen_manager)
-        self.share_note_screen.name = 'share_note'
+        self.view_note_screen = ViewNoteScreen()
+        self.view_note_screen.name = 'view_note'
 
         self.screen_manager.add_widget(self.add_note_screen)
         self.screen_manager.add_widget(self.edit_note_screen)
-        self.screen_manager.add_widget(self.share_note_screen)
+        self.screen_manager.add_widget(self.view_note_screen)
 
         return self.screen_manager
-
-    def open_customization_screen(self, *args):
-        self.screen_manager.current = 'customization'
 
     def update_rect(self, instance, value):
         self.rect.pos = instance.pos

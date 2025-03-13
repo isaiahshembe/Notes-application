@@ -1,13 +1,16 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.toolbar import MDTopAppBar
-from kivymd.uix.button import MDFloatingActionButton
+from kivymd.uix.button import MDFloatingActionButton, MDIconButton, MDFlatButton
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFlatButton
+from kivymd.uix.tooltip import MDTooltip
+
+
+class IconWithTooltip(MDIconButton, MDTooltip):
+    pass
 
 
 class AddNoteScreen(MDScreen):
@@ -32,7 +35,6 @@ class AddNoteScreen(MDScreen):
             height=56,
             pos_hint={"top": 1},
         )
-        # Back arrow to return to main screen
         self.top_app_bar.left_action_items = [
             ["arrow-left", lambda x: self.go_back()]
         ]
@@ -60,6 +62,35 @@ class AddNoteScreen(MDScreen):
         )
         scroll_layout.add_widget(self.title_input)
 
+        # Toolbar for icons (like in your image)
+        icon_toolbar = BoxLayout(
+            orientation='horizontal',
+            size_hint=(1, None),
+            height=48,
+            spacing=10
+        )
+
+        # Numbered circle icon button with tooltip
+        numbered_circle_button = IconWithTooltip(
+            icon="format-list-numbered",
+            tooltip_text="Add Numbered Item",
+            on_release=self.add_numbered_circle
+        )
+
+        # Create table icon button with tooltip
+        create_table_button = IconWithTooltip(
+            icon="table",
+            tooltip_text="Insert Table",
+            on_release=self.show_table_dialog
+        )
+
+        # Add icons to toolbar
+        icon_toolbar.add_widget(numbered_circle_button)
+        icon_toolbar.add_widget(create_table_button)
+
+        # Add toolbar to layout
+        scroll_layout.add_widget(icon_toolbar)
+
         # Body input
         self.body_input = TextInput(
             hint_text="Type something...",
@@ -69,24 +100,6 @@ class AddNoteScreen(MDScreen):
             font_size=16
         )
         scroll_layout.add_widget(self.body_input)
-
-        # Numbered circle button
-        numbered_circle_button = Button(
-            text="Number",
-            size_hint=(0.3, None),
-            height=40,
-            on_press=self.add_numbered_circle
-        )
-        scroll_layout.add_widget(numbered_circle_button)
-
-        # Create table button
-        create_table_button = Button(
-            text="Create Table",
-            size_hint=(0.3, None),
-            height=40,
-            on_press=self.show_table_dialog
-        )
-        scroll_layout.add_widget(create_table_button)
 
         scroll_view.add_widget(scroll_layout)
         main_layout.add_widget(scroll_view)
@@ -104,6 +117,8 @@ class AddNoteScreen(MDScreen):
         # Add the main layout to the screen
         self.add_widget(main_layout)
 
+    # --------------------- Existing Functions --------------------- #
+
     def show_table_dialog(self, instance):
         """Show a dialog to input rows and columns for table creation."""
         self.dialog = MDDialog(
@@ -120,7 +135,6 @@ class AddNoteScreen(MDScreen):
                 MDFlatButton(text="CREATE", on_release=self.create_table),
             ],
         )
-        # Add rows and columns inputs to the dialog
         self.rows_input = TextInput(hint_text="Rows", multiline=False)
         self.columns_input = TextInput(hint_text="Columns", multiline=False)
         self.dialog.content_cls.add_widget(self.rows_input)
@@ -141,41 +155,27 @@ class AddNoteScreen(MDScreen):
             print("Rows and columns must be greater than 0.")
             return
 
-        # Generate the table structure
         table = ""
-        # Create the horizontal border
         horizontal_border = "+" + ("-" * 10 + "+") * columns + "\n"
-        # Create the row template
         row_template = "|" + (" " * 10 + "|") * columns + "\n"
 
-        # Build the table
         table += horizontal_border
         for _ in range(rows):
             table += row_template
             table += horizontal_border
 
-        # Append the table to the existing text in the body_input
         existing_text = self.body_input.text
-        self.body_input.text = existing_text + "\n" + table  # Add a newline before the table
-
-        # Close the dialog
+        self.body_input.text = existing_text + "\n" + table
         self.dialog.dismiss()
 
     def add_numbered_circle(self, instance):
         """Add a numbered circle to the body_input at the current cursor position."""
-        # Get the current cursor position
         cursor_pos = self.body_input.cursor_index()
-
-        # Insert the numbered circle at the cursor position
-        numbered_circle = f"① "  # Use a small circle with the current counter value
+        numbered_circle = f"{self.circle_counter}. "  # Simple number instead of circle for compatibility
         self.body_input.text = (
             self.body_input.text[:cursor_pos] + numbered_circle + self.body_input.text[cursor_pos:]
         )
-
-        # Move the cursor to the end of the inserted circle
         self.body_input.cursor = (cursor_pos + len(numbered_circle), cursor_pos + len(numbered_circle))
-
-        # Increment the counter for the next circle
         self.circle_counter += 1
 
     def save_note(self, instance):
@@ -183,16 +183,10 @@ class AddNoteScreen(MDScreen):
         title = self.title_input.text.strip()
         body = self.body_input.text.strip()
 
-        # Ensure fields are not empty
         if title and body:
-            # Call the callback that actually inserts into DB
             self.add_note_callback(title, body)
-
-            # Clear the inputs
             self.title_input.text = ""
             self.body_input.text = ""
-
-            # Navigate back to main screen
             self.show_confirmation_dialog()
         else:
             print("Title and body cannot be empty.")
@@ -214,5 +208,4 @@ class AddNoteScreen(MDScreen):
         self.go_back()
 
     def go_back(self, obj=None):
-        # Navigate back to main screen
         self.screen_manager.current = 'main'

@@ -24,6 +24,9 @@ from kivy.uix.label import Label
 from kivy.uix.image import Image
 from kivy.core.window import Window
 from kivy.graphics import Rectangle
+from kivymd.uix.label import MDLabel
+from kivy.uix.behaviors import ButtonBehavior
+from kivymd.uix.boxlayout import MDBoxLayout
 
 # Placeholder functions for social media sharing
 def share_on_facebook(note_id):
@@ -35,6 +38,96 @@ def share_on_twitter(note_id):
 def share_on_instagram(note_id):
     print(f"Sharing note {note_id} on Instagram (placeholder).")
 
+
+
+class NoteWidget(ButtonBehavior, MDBoxLayout):
+    def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, view_callback, **kwargs):
+        super().__init__(orientation='vertical', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
+        self.note_id = note_id
+        self.delete_callback = delete_callback
+        self.edit_callback = edit_callback
+        self.share_callback = share_callback
+        self.view_callback = view_callback
+
+        # Add a background with rounded corners
+        with self.canvas.before:
+            self.bg_color = Color(rgba=get_color_from_hex("#FFFFFF"))
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15),])
+
+        self.bind(size=self._update_rect, pos=self._update_rect)
+
+        # Note content
+        self.title_label = MDLabel(
+            text=title,
+            font_style="H6",
+            theme_text_color="Primary",
+            size_hint_y=None,
+            height=dp(30),
+            halign="left"
+        )
+        self.body_label = MDLabel(
+            text=body,
+            font_style="Body1",
+            theme_text_color="Secondary",
+            size_hint_y=None,
+            height=dp(70),
+            halign="left"
+        )
+
+        # Menu button (three-dot icon)
+        self.menu_button = MDIconButton(
+            icon="dots-vertical",
+            pos_hint={"right": 0.9, "top": 0.9},
+            theme_text_color="Custom",
+            text_color=get_color_from_hex("#000000")
+        )
+        self.menu_button.bind(on_release=self.open_menu)
+
+        self.add_widget(self.title_label)
+        self.add_widget(self.body_label)
+        self.add_widget(self.menu_button)
+
+        # Bind the tap event to open the view screen
+        self.bind(on_release=self.open_view_screen)
+
+    def _update_rect(self, instance, value):
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+    def open_menu(self, instance):
+        # Create menu items
+        menu_items = [
+            {
+                "text": "Edit",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.edit_callback(self.note_id, self.title_label.text, self.body_label.text)
+            },
+            {
+                "text": "Share",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.share_callback(self.note_id, self.title_label.text, self.body_label.text)
+            },
+            {
+                "text": "Delete",
+                "viewclass": "OneLineListItem",
+                "on_release": lambda: self.delete_callback(self.note_id, self)
+            },
+        ]
+
+        # Open the dropdown menu
+        self.menu = MDDropdownMenu(
+            caller=instance,
+            items=menu_items,
+            width_mult=4,
+        )
+        self.menu.open()
+
+    def open_view_screen(self, *args):
+        # Call the view callback to open the view screen
+        self.view_callback(self.note_id, self.title_label.text, self.body_label.text)
+
+
+
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -42,7 +135,6 @@ class NotesApp(MDApp):
         self.cursor = None
         self.init_db()
         self.notes = []  # Store notes for filtering
-        self.whatsapp_share = WhatsAppShare()
         self.theme_cls = ThemeManager()  # Initialize ThemeManager
         self.dark_mode = False  # Track dark mode state
 
@@ -150,8 +242,10 @@ class NotesApp(MDApp):
             anchor_title='left',
             size_hint_y=None,
             height=56,
-            pos_hint={"top": 1}
+            pos_hint={"top": 1},
+            md_bg_color=get_color_from_hex("#2196F3")
         )
+       
         search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
         search_layout.add_widget(search_top_app_bar)
 

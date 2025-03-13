@@ -72,9 +72,10 @@ class NotesApp(MDApp):
 
         # Bind the rectangle size to the window size
         self.welcome_screen.bind(size=self.update_rect, pos=self.update_rect)
+        welcome_image = Image(source='assets/notepad.png')  # Relative path to image
 
-        welcome_image = Image(source=r'C:\Users\user\Desktop\Notespad\Notes-application\notesApplication\notepad.png')  # Replace with your image path
-        welcome_label = Label(text='Welcome to Notes App', font_size='24sp', color=(1, 0.5, 0, 1))  # White text
+        
+        welcome_label = Label(text='Welcome to Notes App', font_size='24sp', color=(0, 0, 1, 1))  # White text
         welcome_layout.add_widget(welcome_image)
         welcome_layout.add_widget(welcome_label)
         self.welcome_screen.add_widget(welcome_layout)
@@ -198,7 +199,7 @@ class NotesApp(MDApp):
         self.screen_manager.current = 'welcome'
 
         # Schedule the transition to the main screen after 2 seconds
-        Clock.schedule_once(self.switch_to_main_screen, 20)
+        Clock.schedule_once(self.switch_to_main_screen, 5)
 
         return self.screen_manager
 

@@ -1,3 +1,9 @@
+from kivy.clock import Clock
+from kivy.uix.label import Label
+from kivy.uix.image import Image
+from kivy.uix.boxlayout import BoxLayout
+from kivy.core.window import Window
+from kivy.graphics import Color, Rectangle
 from kivymd.app import MDApp
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.screen import MDScreen
@@ -56,6 +62,25 @@ class NotesApp(MDApp):
     def build(self):
         self.screen_manager = ScreenManager()
 
+        # Welcome Screen
+        self.welcome_screen = MDScreen(name='welcome')
+        welcome_layout = BoxLayout(orientation='vertical')
+
+        # Set the background color of the welcome screen to orange
+        with self.welcome_screen.canvas.before:
+            Color(1, 1, 1, 1)  # Orange color (R, G, B, A)
+            self.rect = Rectangle(size=Window.size, pos=self.welcome_screen.pos)
+
+        # Bind the rectangle size to the window size
+        self.welcome_screen.bind(size=self.update_rect, pos=self.update_rect)
+
+        welcome_image = Image(source=r'C:\Users\user\Desktop\Notespad\Notes-application\notesApplication\notepad.png')  # Replace with your image path
+        welcome_label = Label(text='Welcome to Notes App', font_size='24sp', color=(1, 0.5, 0, 1))  # White text
+        welcome_layout.add_widget(welcome_image)
+        welcome_layout.add_widget(welcome_label)
+        self.welcome_screen.add_widget(welcome_layout)
+        self.screen_manager.add_widget(self.welcome_screen)
+
         # Main Screen
         self.main_screen = MDScreen(name='main')
 
@@ -113,64 +138,26 @@ class NotesApp(MDApp):
 
         self.screen_manager.add_widget(self.main_screen)
 
-        # -----------------------
-        # Search Screen
-        # -----------------------
-        self.search_screen = MDScreen(name='search')
-        search_layout = BoxLayout(orientation='vertical')
+        # Set the welcome screen as the current screen
+        self.screen_manager.current = 'welcome'
 
-        # Top app bar for search screen with a back arrow
-        search_top_app_bar = MDTopAppBar(
-            title='Search',
-            anchor_title='left',
-            size_hint_y=None,
-            height=56,
-            pos_hint={"top": 1}
-        )
-        search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
-        search_layout.add_widget(search_top_app_bar)
-
-        # Full-width search bar
-        self.search_bar = TextInput(
-            hint_text='Search notes...',
-            size_hint=(1, None),
-            height=40,
-            multiline=False,
-        )
-        # Bind changes to update search results dynamically
-        self.search_bar.bind(text=self.filter_search_results)
-        search_layout.add_widget(self.search_bar)
-
-        # Scrollable area for search results
-        scroll_view_search = ScrollView(size_hint=(1, 1))
-        self.search_results_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=12)
-        self.search_results_layout.bind(minimum_height=self.search_results_layout.setter('height'))
-        scroll_view_search.add_widget(self.search_results_layout)
-        search_layout.add_widget(scroll_view_search)
-
-        self.search_screen.add_widget(search_layout)
-        self.screen_manager.add_widget(self.search_screen)
-
-        # -----------------------
-        # Additional Screens
-        # -----------------------
-        self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
-        self.add_note_screen.name = 'add_note'
-        self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
-        self.edit_note_screen.name = 'edit_note'
-        self.share_note_screen = ShareNoteScreen(None, None, None, self.update_share_callback, self.screen_manager)
-        self.share_note_screen.name = 'share_note'
-
-        # Add the ViewNoteScreen
-        self.view_note_screen = ViewNoteScreen()
-        self.view_note_screen.name = 'view_note'
-
-        self.screen_manager.add_widget(self.add_note_screen)
-        self.screen_manager.add_widget(self.edit_note_screen)
-        self.screen_manager.add_widget(self.share_note_screen)
-        self.screen_manager.add_widget(self.view_note_screen)
+        # Schedule the transition to the main screen after 2 seconds
+        Clock.schedule_once(self.switch_to_main_screen, 10)
 
         return self.screen_manager
+
+    def update_rect(self, instance, value):
+        """
+        Update the size and position of the background rectangle.
+        """
+        self.rect.pos = instance.pos
+        self.rect.size = instance.size
+
+    def switch_to_main_screen(self, dt):
+        """
+        Switch to the main screen after the welcome screen.
+        """
+        self.screen_manager.current = 'main'
 
     def toggle_dark_mode(self):
         """
@@ -192,10 +179,6 @@ class NotesApp(MDApp):
 
     def open_customization_screen(self, *args):
         self.screen_manager.current = 'customization'
-
-    def update_rect(self, instance, value):
-        self.rect.pos = instance.pos
-        self.rect.size = instance.size
 
     def open_search_screen(self, *args):
         self.load_notes()

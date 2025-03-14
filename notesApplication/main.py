@@ -183,7 +183,7 @@ class NotesApp(MDApp):
             size_hint_y=None,
             height=dp(56),
             pos_hint={"top": 1},
-            md_bg_color=get_color_from_hex("#2196F3")
+            md_bg_color=get_color_from_hex("#FFA500")
         )
         top_app_bar.left_action_items = [['menu', lambda x: self.menu.open_menu(x)]]
         top_app_bar.right_action_items = [

@@ -7,8 +7,8 @@ from kivy.uix.widget import Widget
 from kivymd.uix.dialog import MDDialog
 from whatsapp_share import WhatsAppShare
 from facebook_share import share_on_facebook
-from twitter_share import share_on_twitter
 from instagram_share import share_on_instagram
+from twitter_share import TwitterShare
 
 class ShareNoteScreen(MDScreen):
     def __init__(self, note_id, title, body, callback, screen_manager, **kwargs):
@@ -20,6 +20,14 @@ class ShareNoteScreen(MDScreen):
         self.screen_manager = screen_manager
         self.dialog = None
         self.whatsapp_share = WhatsAppShare()
+
+        # Initialize TwitterShare with your API credentials
+        self.twitter_share = TwitterShare(
+            api_key='your_api_key',
+            api_secret_key='your_api_secret_key',
+            access_token='your_access_token',
+            access_token_secret='your_access_token_secret'
+        )
 
         # Create a top app bar (Fixed at the top)
         top_app_bar = MDTopAppBar(
@@ -81,32 +89,13 @@ class ShareNoteScreen(MDScreen):
         self.add_widget(content_layout)  # Content
         self.add_widget(top_app_bar)  # Fixed App Bar
 
-    def share_on_facebook(self):
-        try:
-            share_on_facebook(self.note_id)
-            self.show_confirmation_dialog("Facebook", success=True)
-        except Exception as e:
-            self.show_confirmation_dialog("Facebook", success=False)
-
     def share_on_twitter(self):
         try:
-            share_on_twitter(self.note_id)
+            # Share the note on Twitter using the initialized self.twitter_share instance
+            self.twitter_share.share_note_on_twitter(self.note_id, self.title, self.body)
             self.show_confirmation_dialog("Twitter", success=True)
         except Exception as e:
             self.show_confirmation_dialog("Twitter", success=False)
-
-    def share_on_instagram(self):
-        try:
-            share_on_instagram(self.note_id)
-            self.show_confirmation_dialog("Instagram", success=True)
-        except Exception as e:
-            self.show_confirmation_dialog("Instagram", success=False)
-
-    def share_on_whatsapp(self):
-        try:
-            self.whatsapp_share.share_on_whatsapp(self.note_id, self.title, self.body, lambda: self.show_confirmation_dialog("WhatsApp", success=True))
-        except Exception as e:
-            self.show_confirmation_dialog("WhatsApp", success=False)
 
     def show_confirmation_dialog(self, platform, success):
         if not self.dialog:

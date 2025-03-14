@@ -137,7 +137,7 @@ class NotesApp(MDApp):
         self.notes = []  # Store notes for filtering
         self.theme_cls = ThemeManager()  # Initialize ThemeManager
         self.dark_mode = False  # Track dark mode state
-
+        self.whatsapp_share = WhatsAppShare() 
     def init_db(self):
         self.conn = sqlite3.connect('notes.db')
         self.cursor = self.conn.cursor()
@@ -318,10 +318,19 @@ class NotesApp(MDApp):
         if self.dark_mode:
             self.theme_cls.theme_style = "Dark"  # Set dark mode
             self.theme_cls.primary_palette = "BlueGray"  # Dark mode primary color
+            text_color = (0.4, 0.5, 0.6, 1)  # White text in dark mode       
         else:
             self.theme_cls.theme_style = "Light"  # Set light mode
             self.theme_cls.primary_palette = "Blue"  # Light mode primary color
+            text_color = (0, 0, 0, 1)  # Black text in light mode
 
+        # Update all text elements dynamically to Blue Gray
+        for note_widget in self.notes_layout.children:
+           if isinstance(note_widget, NoteWidget):
+            note_widget.title_label.theme_text_color = "Custom"
+            note_widget.title_label.text_color = text_color
+            note_widget.body_label.theme_text_color = "Custom"
+            note_widget.body_label.text_color = text_color    
     def update_share_callback(self, *args):
         """
         Placeholder method for handling share callback logic.
@@ -360,7 +369,7 @@ class NotesApp(MDApp):
         self.save_note(title, body)
 
     def load_notes(self):
-        self.cursor.execute('SELECT id, title, body FROM notes')
+        self.cursor.execute('SELECT id, title, body FROM notes ')
         self.notes = self.cursor.fetchall()
         self.filter_notes()
 
@@ -381,6 +390,10 @@ class NotesApp(MDApp):
     def save_note(self, title, body):
         self.cursor.execute('INSERT INTO notes (title, body) VALUES (?, ?)', (title, body))
         self.conn.commit()
+
+         # Debug: Print all notes in DB
+        self.cursor.execute('SELECT id, title, body FROM notes')
+        print("DEBUG: All notes in DB:", self.cursor.fetchall())
         self.load_notes()
 
     def delete_note(self, note_id, note_widget):

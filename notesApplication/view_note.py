@@ -37,18 +37,19 @@ class ViewNoteScreen(MDScreen):
             spacing=dp(12)
         )
 
-        # Top Row: Back button, Date, Buttons
+        # Top Row: Back button, Date, Buttons with orange background
         self.top_row = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
             height=dp(50),
             spacing=dp(10),
-            padding=[dp(10), dp(5), dp(10), dp(5)]
+            padding=[dp(10), dp(5), dp(10), dp(5)],
+            md_bg_color=get_color_from_hex("#FFA500")  # Orange background
         )
 
         self.back_button = MDIconButton(
             icon="arrow-left",
-            text_color=get_color_from_hex("#000000"),
+            text_color=get_color_from_hex("#FFFFFF"),  # White text color for contrast
             on_release=self.on_back
         )
 
@@ -57,13 +58,14 @@ class ViewNoteScreen(MDScreen):
             text="",
             font_style="H6",
             theme_text_color="Secondary",
-            halign="center"
+            halign="center",
+            size_hint_x=1  # Ensure it takes full width to center the date
         )
 
         # Three-dot menu button
         self.menu_button = MDIconButton(
             icon="dots-vertical",
-            text_color=get_color_from_hex("#000000"),
+            text_color=get_color_from_hex("#FFFFFF"),  # White text color for contrast
             on_release=self.open_menu
         )
 

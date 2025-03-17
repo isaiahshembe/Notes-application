@@ -1,17 +1,18 @@
+from kivy.uix.label import Label
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.button import MDFloatingActionButton, MDIconButton, MDFlatButton
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.tooltip import MDTooltip
-
+from kivymd.uix.pickers import MDDatePicker  # Correct import
 
 class IconWithTooltip(MDIconButton, MDTooltip):
     pass
-
 
 class AddNoteScreen(MDScreen):
     def __init__(self, add_note_callback, screen_manager, conn, **kwargs):
@@ -61,6 +62,15 @@ class AddNoteScreen(MDScreen):
             font_size=18,
         )
         scroll_layout.add_widget(self.title_input)
+
+        # Calendar button
+        self.calendar_button = Button(
+            text="Select Date",
+            size_hint=(1, None),
+            height=48,
+            on_release=self.show_date_picker
+        )
+        scroll_layout.add_widget(self.calendar_button)
 
         # Toolbar for icons (like in your image)
         icon_toolbar = BoxLayout(
@@ -182,14 +192,15 @@ class AddNoteScreen(MDScreen):
         """Save the note and return to main screen."""
         title = self.title_input.text.strip()
         body = self.body_input.text.strip()
+        date = self.calendar_button.text  # Get the selected date
 
         if title and body:
-            self.add_note_callback(title, body)
+            self.add_note_callback(title, body, date)  # Pass the date to the callback
             self.title_input.text = ""
             self.body_input.text = ""
             self.show_confirmation_dialog()
         else:
-            print("Title and body cannot be empty.")
+            print("Title, body and date cannot be empty.")
 
     def show_confirmation_dialog(self):
         if not self.dialog:
@@ -206,6 +217,19 @@ class AddNoteScreen(MDScreen):
     def close_dialog(self, obj):
         self.dialog.dismiss()
         self.go_back()
+
+    def go_back(self, obj=None):
+        self.screen_manager.current = 'main'
+
+    def show_date_picker(self, instance):
+        """Show a date picker dialog."""
+        date_picker = MDDatePicker()
+        date_picker.bind(on_save=self.on_date_selected)  # Bind to the on_save event
+        date_picker.open()
+
+    def on_date_selected(self, instance, date, *args):
+        """Handle the selected date."""
+        self.calendar_button.text = date.strftime("%Y-%m-%d")
 
     def go_back(self, obj=None):
         self.screen_manager.current = 'main'

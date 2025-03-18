@@ -104,8 +104,8 @@ class MyNavigationDrawer(MDNavigationDrawer):
 
         # MDList for menu items
         drawer_list = MDList()
-        item_calender = OneLineIconListItem(text="Calender")
-        item_calender.add_widget(IconLeftWidget(icon="calender-month",))
+        item_calender = OneLineIconListItem(text="Favorite")
+        item_calender.add_widget(IconLeftWidget(icon="file-star",))
         item_calender.bind(on_release=lambda x: self.on_item_press("rate_us"))
         drawer_list.add_widget(item_calender)
 
@@ -153,6 +153,8 @@ class MyNavigationDrawer(MDNavigationDrawer):
         self.set_state("close")
         if item_name == "recommend":
             self.callback()
+
+            
 
 
 # ----------------------------------------------------------------

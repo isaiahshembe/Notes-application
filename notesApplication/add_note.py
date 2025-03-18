@@ -249,6 +249,7 @@ class AddNoteScreen(MDScreen):
         title = self.title_input.text.strip()
         body = self.body_input.text.strip()
         date = self.calendar_button.text  # Get the selected date
+        print(f"Title: {title}, Body: {body}, Date: {date}")
 
         if title and body:
             self.add_note_callback(title, body, date)  # Pass the date to the callback

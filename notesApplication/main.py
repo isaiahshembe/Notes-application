@@ -160,7 +160,8 @@ class MyNavigationDrawer(MDNavigationDrawer):
 # ----------------------------------------------------------------
 class NoteWidget(ButtonBehavior, MDBoxLayout):
     def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, view_callback, **kwargs):
-        super().__init__(orientation='vertical', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
+        # Use horizontal layout: text container on left and menu button on right.
+        super().__init__(orientation='horizontal', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
         self.note_id = note_id
         self.delete_callback = delete_callback
         self.edit_callback = edit_callback
@@ -185,14 +186,6 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             text_size=(Window.width - dp(100), None),
             shorten=True,
         )
-        self.date_label = MDLabel(
-            text=date,
-            font_style="Caption",
-            theme_text_color="Secondary",
-            size_hint_y=None,
-            height=dp(20),
-            halign="left"
-        )
         self.body_label = MDLabel(
             text=body,
             font_style="Body1",
@@ -215,9 +208,6 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             text_color=get_color_from_hex("#000000")
         )
         self.menu_button.bind(on_release=self.open_menu)
-
-        self.add_widget(self.title_label)
-        self.add_widget(self.body_label)
         self.add_widget(self.menu_button)
 
         # Bind tap to open view screen
@@ -273,17 +263,9 @@ class NotesApp(MDApp):
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT,
-                body TEXT,
-                date TEXT
+                body TEXT
             )
         ''')
-        self.cursor.execute("PRAGMA table_info(notes)")
-        columns = self.cursor.fetchall()
-        column_names = [column[1] for column in columns]
-        if 'date' not in column_names:
-         self.cursor.execute("ALTER TABLE notes ADD COLUMN date TEXT")
-       
-
         self.conn.commit()
 
     def build(self):
@@ -462,10 +444,10 @@ class NotesApp(MDApp):
         self.screen_manager.current = 'add_note'
 
     def add_note_callback(self, title, body, date):
-        self.save_note(title, body, date)
+        self.save_note(title, body)
 
     def load_notes(self):
-        self.cursor.execute('SELECT id, title, body, date FROM notes ')
+        self.cursor.execute('SELECT id, title, body FROM notes')
         self.notes = self.cursor.fetchall()
         self.filter_notes()
 
@@ -477,7 +459,6 @@ class NotesApp(MDApp):
                 note_id=note[0],
                 title=note[1],
                 body=note[2],
-                date=note[3],
                 delete_callback=self.delete_note,
                 edit_callback=self.open_edit_note_screen,
                 share_callback=self.open_share_note_screen,
@@ -485,8 +466,8 @@ class NotesApp(MDApp):
             )
             self.notes_layout.add_widget(note_widget)
 
-    def save_note(self, title, body, date):
-        self.cursor.execute('INSERT INTO notes (title, body, date) VALUES (?, ?, ?)', (title, body, date))
+    def save_note(self, title, body):
+        self.cursor.execute('INSERT INTO notes (title, body) VALUES (?, ?)', (title, body))
         self.conn.commit()
         self.cursor.execute('SELECT id, title, body FROM notes')
         print("DEBUG: All notes in DB:", self.cursor.fetchall())

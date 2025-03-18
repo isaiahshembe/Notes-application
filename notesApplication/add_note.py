@@ -1,12 +1,15 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.textinput import TextInput
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.button import MDFloatingActionButton, MDIconButton, MDFlatButton
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.tooltip import MDTooltip
+from kivymd.uix.textfield import MDTextField
+from kivy.metrics import dp
+from kivy.utils import get_color_from_hex
+import datetime
 
 
 class IconWithTooltip(MDIconButton, MDTooltip):
@@ -35,9 +38,7 @@ class AddNoteScreen(MDScreen):
             height=56,
             pos_hint={"top": 1},
         )
-        self.top_app_bar.left_action_items = [
-            ["arrow-left", lambda x: self.go_back()]
-        ]
+        self.top_app_bar.left_action_items = [["arrow-left", lambda x: self.go_back()]]
         main_layout.add_widget(self.top_app_bar)
 
         # --------------------------------------------------
@@ -52,22 +53,42 @@ class AddNoteScreen(MDScreen):
         )
         scroll_layout.bind(minimum_height=scroll_layout.setter('height'))
 
-        # Title input
-        self.title_input = TextInput(
-            hint_text="Title",
-            size_hint=(1, None),
-            height=48,
-            multiline=False,
-            font_size=18,
+        # 1) Date field with a calendar icon
+        today_str = datetime.datetime.now().strftime("%A, %d %B %Y")
+        self.date_field = MDTextField(
+            text=today_str,
+            icon_left="calendar",
+            mode="rectangle",
+            line_color_focus=get_color_from_hex("#000000"),
+            hint_text_color_normal=get_color_from_hex("#000000"),
+            readonly=True,
         )
+        # Set text color after creation
+        try:
+            self.date_field.text_color_normal = get_color_from_hex("#000000")
+        except Exception as e:
+            self.date_field.foreground_color = get_color_from_hex("#000000")
+        scroll_layout.add_widget(self.date_field)
+
+        # 2) Title input with placeholder "Add title"
+        self.title_input = MDTextField(
+            hint_text="Add title",
+            mode="rectangle",
+            line_color_focus=get_color_from_hex("#000000"),
+            hint_text_color_normal=get_color_from_hex("#000000"),
+        )
+        try:
+            self.title_input.text_color_normal = get_color_from_hex("#000000")
+        except Exception as e:
+            self.title_input.foreground_color = get_color_from_hex("#000000")
         scroll_layout.add_widget(self.title_input)
 
-        # Toolbar for icons (like in your image)
+        # 3) Toolbar for icons (numbered circles, table, image, emoji, etc.)
         icon_toolbar = BoxLayout(
             orientation='horizontal',
             size_hint=(1, None),
-            height=48,
-            spacing=10
+            height=dp(48),
+            spacing=dp(10)
         )
 
         # Numbered circle icon button with tooltip
@@ -84,21 +105,42 @@ class AddNoteScreen(MDScreen):
             on_release=self.show_table_dialog
         )
 
-        # Add icons to toolbar
+        # Add image icon button with tooltip
+        add_image_button = IconWithTooltip(
+            icon="image-outline",  # You can choose a suitable image icon
+            tooltip_text="Add Image",
+            on_release=self.add_image
+        )
+
+        # Add emoji icon button with tooltip
+        add_emoji_button = IconWithTooltip(
+            icon="emoticon-happy-outline",  # Choose an emoji icon
+            tooltip_text="Add Emoji",
+            on_release=self.add_emoji
+        )
+
+        # Add all toolbar buttons
         icon_toolbar.add_widget(numbered_circle_button)
         icon_toolbar.add_widget(create_table_button)
-
-        # Add toolbar to layout
+        icon_toolbar.add_widget(add_image_button)
+        icon_toolbar.add_widget(add_emoji_button)
         scroll_layout.add_widget(icon_toolbar)
 
-        # Body input
-        self.body_input = TextInput(
-            hint_text="Type something...",
-            size_hint=(1, None),
-            height=300,
+        # 4) Body input with placeholder "Start typing here..."
+        self.body_input = MDTextField(
+            hint_text="Start typing here...",
             multiline=True,
-            font_size=16
+            mode="rectangle",
+            line_color_focus=get_color_from_hex("#000000"),
+            hint_text_color_normal=get_color_from_hex("#000000"),
+            font_size=16,
+            size_hint_y=None,
+            height=dp(200),
         )
+        try:
+            self.body_input.text_color_normal = get_color_from_hex("#000000")
+        except Exception as e:
+            self.body_input.foreground_color = get_color_from_hex("#000000")
         scroll_layout.add_widget(self.body_input)
 
         scroll_view.add_widget(scroll_layout)
@@ -128,18 +170,18 @@ class AddNoteScreen(MDScreen):
                 orientation='vertical',
                 spacing=12,
                 size_hint_y=None,
-                height=100,
+                height=dp(100),
             ),
             buttons=[
                 MDFlatButton(text="CANCEL", on_release=lambda x: self.dialog.dismiss()),
                 MDFlatButton(text="CREATE", on_release=self.create_table),
             ],
         )
-        self.rows_input = TextInput(hint_text="Rows", multiline=False)
-        self.columns_input = TextInput(hint_text="Columns", multiline=False)
+        from kivymd.uix.textfield import MDTextField
+        self.rows_input = MDTextField(hint_text="Rows", mode="rectangle")
+        self.columns_input = MDTextField(hint_text="Columns", mode="rectangle")
         self.dialog.content_cls.add_widget(self.rows_input)
         self.dialog.content_cls.add_widget(self.columns_input)
-
         self.dialog.open()
 
     def create_table(self, instance):
@@ -169,14 +211,26 @@ class AddNoteScreen(MDScreen):
         self.dialog.dismiss()
 
     def add_numbered_circle(self, instance):
-        """Add a numbered circle to the body_input at the current cursor position."""
-        cursor_pos = self.body_input.cursor_index()
-        numbered_circle = f"{self.circle_counter}. "  # Simple number instead of circle for compatibility
-        self.body_input.text = (
-            self.body_input.text[:cursor_pos] + numbered_circle + self.body_input.text[cursor_pos:]
-        )
-        self.body_input.cursor = (cursor_pos + len(numbered_circle), cursor_pos + len(numbered_circle))
+        """Add a numbered item at the end of the body text."""
+        numbered_line = f"{self.circle_counter}. "
+        self.body_input.text += ("\n" + numbered_line)
         self.circle_counter += 1
+
+    def add_image(self, instance):
+        """Stub for adding an image to the note.
+           You can integrate a file chooser or pre-defined images here."""
+        # For now, we'll simply append a placeholder text.
+        image_placeholder = "\n[Image: your_image.png]"
+        self.body_input.text += image_placeholder
+        print("Add image tapped.")
+
+    def add_emoji(self, instance):
+        """Stub for adding an emoji to the note.
+           You can integrate an emoji picker or a predefined list of emojis."""
+        # For now, we'll simply append a sample emoji.
+        emoji = " 😊"
+        self.body_input.text += emoji
+        print("Add emoji tapped.")
 
     def save_note(self, instance):
         """Save the note and return to main screen."""
@@ -196,9 +250,7 @@ class AddNoteScreen(MDScreen):
             self.dialog = MDDialog(
                 text="Note saved successfully!",
                 buttons=[
-                    MDFlatButton(
-                        text="OK", on_release=self.close_dialog
-                    ),
+                    MDFlatButton(text="OK", on_release=self.close_dialog),
                 ],
             )
         self.dialog.open()

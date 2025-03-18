@@ -1,41 +1,41 @@
-from kivymd.app import MDApp
-from kivymd.uix.toolbar import MDTopAppBar
-from kivymd.uix.screen import MDScreen
+from kivy.metrics import dp
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
-from text_widget import NoteWidget
-# Remove the old Menu import:
-# from menu import Menu 
-from kivymd.uix.navigationdrawer import MDNavigationLayout
- 
+from kivy.uix.screenmanager import ScreenManager
+from kivy.uix.label import Label
+import os
+
+from kivy.uix.image import Image
+from kivy.uix.behaviors import ButtonBehavior
+from kivy.core.window import Window
+from kivy.graphics import Color, RoundedRectangle, Rectangle
+from kivy.clock import Clock
+from kivy.utils import get_color_from_hex
+import sqlite3
+from kivy.uix.image import Image
+
+# KivyMD imports
+from kivymd.app import MDApp
+from kivymd.uix.toolbar import MDTopAppBar
+from kivymd.uix.screen import MDScreen
+from kivymd.uix.navigationdrawer import MDNavigationLayout, MDNavigationDrawer
+from kivymd.uix.list import MDList, OneLineIconListItem, IconLeftWidget
+from kivymd.uix.button import MDIconButton
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.label import MDLabel
+from kivymd.theming import ThemeManager
+
+# Custom modules (ensure these paths are correct or adjust as needed)
+from text_widget import NoteWidget  # We'll override this with our new NoteWidget below
 from add_note import AddNoteScreen
 from edit_note import EditNoteScreen
 from share_note import ShareNoteScreen
-from kivy.uix.screenmanager import ScreenManager
-import sqlite3
-from kivy.graphics import Color, RoundedRectangle, Rectangle
-from kivymd.uix.button import MDIconButton, MDRaisedButton
-from whatsapp_share import WhatsAppShare
-from kivy.metrics import dp
-from kivy.utils import get_color_from_hex
 from view_note import ViewNoteScreen
-from kivymd.uix.menu import MDDropdownMenu
-from kivymd.theming import ThemeManager
-from kivy.clock import Clock
-from kivy.uix.label import Label
-from kivy.uix.image import Image
-from kivy.core.window import Window
-from kivymd.uix.label import MDLabel
-from kivy.uix.behaviors import ButtonBehavior
-from kivymd.uix.boxlayout import MDBoxLayout
+from whatsapp_share import WhatsAppShare
 
-# Additional imports for the navigation drawer
-from kivymd.uix.navigationdrawer import MDNavigationDrawer
-from kivymd.uix.list import OneLineListItem
-
-
-# Placeholder functions for social media sharing
+# Placeholder social sharing functions
 def share_on_facebook(note_id):
     print(f"Sharing note {note_id} on Facebook (placeholder).")
 
@@ -45,10 +45,123 @@ def share_on_twitter(note_id):
 def share_on_instagram(note_id):
     print(f"Sharing note {note_id} on Instagram (placeholder).")
 
-# Update your NoteWidget if needed (this example remains the same)
+
+# ----------------------------------------------------------------
+# Custom Navigation Drawer Class with Pink Header
+# ----------------------------------------------------------------
+class MyNavigationDrawer(MDNavigationDrawer):
+    def __init__(self, callback, **kwargs):
+        """
+        :param callback: a function to be called when certain items are pressed.
+        """
+        super().__init__(**kwargs)
+        self.callback = callback
+
+        # Main layout of the navigation drawer
+        main_layout = MDBoxLayout(orientation="vertical")
+
+        # Header area (pink background)
+        header_layout = MDBoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            height=dp(160),
+            padding=dp(10),
+            spacing=dp(10),
+        )
+        header_layout.md_bg_color = get_color_from_hex("#FFA500")
+        
+        # Layout for icon and text
+        icon_text_layout = MDBoxLayout(
+            orientation="horizontal",
+            spacing=dp(10),
+            size_hint_y=None,
+            height=dp(100),
+            pos_hint={"center_x": 0.5},
+            
+        )
+
+        # App icon
+        
+        app_icon = Image(
+            source='assets/notepad.png',  # Replace with your icon name (or use an image)
+            size_hint=(None, None),
+            size=(dp(100), dp(100)),
+            allow_stretch=True
+        )
+
+        icon_text_layout.add_widget(app_icon)
+
+        account_label = MDLabel(
+            text="NOTEPAD",
+            halign="center",
+            font_style="H6",
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1),
+        )
+        header_layout.add_widget(icon_text_layout)
+        header_layout.add_widget(account_label)
+        main_layout.add_widget(header_layout)
+
+        # MDList for menu items
+        drawer_list = MDList()
+        item_calender = OneLineIconListItem(text="Calender")
+        item_calender.add_widget(IconLeftWidget(icon="calender-month",))
+        item_calender.bind(on_release=lambda x: self.on_item_press("rate_us"))
+        drawer_list.add_widget(item_calender)
+
+        
+        item_rate = OneLineIconListItem(text="Rate Us")
+        item_rate.add_widget(IconLeftWidget(icon="heart-circle"))
+        item_rate.bind(on_release=lambda x: self.on_item_press("rate_us"))
+        drawer_list.add_widget(item_rate)
+
+        item_recommend = OneLineIconListItem(text="Share App")
+        item_recommend.add_widget(IconLeftWidget(icon="share"))
+        item_recommend.bind(on_release=lambda x: self.on_item_press("recommend"))
+        drawer_list.add_widget(item_recommend)
+
+        item_premium = OneLineIconListItem(text="Get Premium")
+        item_premium.add_widget(IconLeftWidget(icon="crown"))
+        item_premium.bind(on_release=lambda x: self.on_item_press("premium"))
+        drawer_list.add_widget(item_premium)
+
+        item_facebook = OneLineIconListItem(text="Feedback")
+        item_facebook.add_widget(IconLeftWidget(icon="message-processing"))
+        item_facebook.bind(on_release=lambda x: self.on_item_press("feedback"))
+        drawer_list.add_widget(item_facebook)
+
+        item_feedback = OneLineIconListItem(text="Recycle Bin")
+        item_feedback.add_widget(IconLeftWidget(icon="trash-can"))
+        item_feedback.bind(on_release=lambda x: self.on_item_press("feedback"))
+        drawer_list.add_widget(item_feedback)
+
+        item_about = OneLineIconListItem(text="About")
+        item_about.add_widget(IconLeftWidget(icon="information"))
+        item_about.bind(on_release=lambda x: self.on_item_press("about"))
+        drawer_list.add_widget(item_about)
+
+        item_privacy = OneLineIconListItem(text="Privacy Policy")
+        item_privacy.add_widget(IconLeftWidget(icon="shield-account-outline"))
+        item_privacy.bind(on_release=lambda x: self.on_item_press("privacy"))
+        drawer_list.add_widget(item_privacy)
+
+        main_layout.add_widget(drawer_list)
+        self.add_widget(main_layout)
+
+    def on_item_press(self, item_name):
+        print(f"You pressed: {item_name}")
+        self.set_state("close")
+        if item_name == "recommend":
+            self.callback()
+
+
+# ----------------------------------------------------------------
+# Updated NoteWidget Class
+# ----------------------------------------------------------------
 class NoteWidget(ButtonBehavior, MDBoxLayout):
     def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, view_callback, **kwargs):
-        super().__init__(orientation='vertical', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
+        # Use horizontal layout: text container on left and menu button on right.
+        super().__init__(orientation='horizontal', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
         self.note_id = note_id
         self.delete_callback = delete_callback
         self.edit_callback = edit_callback
@@ -61,13 +174,17 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15),])
         self.bind(size=self._update_rect, pos=self._update_rect)
 
+        # Create inner container for title and body
+        text_container = MDBoxLayout(orientation='vertical', spacing=dp(4))
         self.title_label = MDLabel(
             text=title,
             font_style="H6",
             theme_text_color="Primary",
             size_hint_y=None,
             height=dp(30),
-            halign="left"
+            halign="left",
+            text_size=(Window.width - dp(100), None),
+            shorten=True,
         )
         self.body_label = MDLabel(
             text=body,
@@ -75,22 +192,25 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             theme_text_color="Secondary",
             size_hint_y=None,
             height=dp(70),
-            halign="left"
+            halign="left",
+            text_size=(Window.width - dp(100), None),
+            shorten=True,
         )
+        text_container.add_widget(self.title_label)
+        text_container.add_widget(self.body_label)
+        self.add_widget(text_container)
 
+        # Menu button on the right
         self.menu_button = MDIconButton(
             icon="dots-vertical",
-            pos_hint={"right": 0.9, "top": 0.9},
+            pos_hint={"center_y": 0.5},
             theme_text_color="Custom",
             text_color=get_color_from_hex("#000000")
         )
         self.menu_button.bind(on_release=self.open_menu)
-
-        self.add_widget(self.title_label)
-        self.add_widget(self.body_label)
         self.add_widget(self.menu_button)
 
-        # Bind tap to open the view screen
+        # Bind tap to open view screen
         self.bind(on_release=self.open_view_screen)
 
     def _update_rect(self, instance, value):
@@ -102,48 +222,29 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             {
                 "text": "Edit",
                 "viewclass": "OneLineListItem",
-                "on_release": lambda: self.edit_callback(self.note_id, self.title_label.text, self.body_label.text)
+                "on_release": lambda: self.edit_callback(self.note_id, self.title_label.text, self.body_label.text),
             },
             {
                 "text": "Share",
                 "viewclass": "OneLineListItem",
-                "on_release": lambda: self.share_callback(self.note_id, self.title_label.text, self.body_label.text)
+                "on_release": lambda: self.share_callback(self.note_id, self.title_label.text, self.body_label.text),
             },
             {
                 "text": "Delete",
                 "viewclass": "OneLineListItem",
-                "on_release": lambda: self.delete_callback(self.note_id, self)
+                "on_release": lambda: self.delete_callback(self.note_id, self),
             },
         ]
-        self.menu = MDDropdownMenu(
-            caller=instance,
-            items=menu_items,
-            width_mult=4,
-        )
+        self.menu = MDDropdownMenu(caller=instance, items=menu_items, width_mult=4)
         self.menu.open()
 
     def open_view_screen(self, *args):
         self.view_callback(self.note_id, self.title_label.text, self.body_label.text)
 
-# Create a custom Navigation Drawer that replaces your old dropdown Menu
-class MyNavigationDrawer(MDNavigationDrawer):
-    def __init__(self, callback, **kwargs):
-        super().__init__(**kwargs)
-        self.callback = callback
 
-        # Create a vertical layout for drawer content
-        drawer_content = BoxLayout(orientation="vertical")
-        # Create a list item for "Add New Note"
-        add_note_item = OneLineListItem(text="Add New Note")
-        add_note_item.bind(on_release=lambda x: self.menu_callback("Add New Note"))
-        drawer_content.add_widget(add_note_item)
-        self.add_widget(drawer_content)
-
-    def menu_callback(self, text):
-        if text == "Add New Note":
-            self.callback()
-        self.set_state("close")
-
+# ----------------------------------------------------------------
+# Main App
+# ----------------------------------------------------------------
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -153,12 +254,12 @@ class NotesApp(MDApp):
         self.notes = []  # Store notes for filtering
         self.theme_cls = ThemeManager()  # Initialize ThemeManager
         self.dark_mode = False  # Track dark mode state
-        self.whatsapp_share = WhatsAppShare() 
+        self.whatsapp_share = WhatsAppShare()
 
     def init_db(self):
         self.conn = sqlite3.connect('notes.db')
         self.cursor = self.conn.cursor()
-        self.cursor.execute(''' 
+        self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT,
@@ -170,10 +271,11 @@ class NotesApp(MDApp):
     def build(self):
         # Wrap everything in an MDNavigationLayout
         self.nav_layout = MDNavigationLayout()
-
         self.screen_manager = ScreenManager()
 
-        # Welcome Screen
+        # ----------------------------------------------------------------
+        # 1) Welcome Screen
+        # ----------------------------------------------------------------
         self.welcome_screen = MDScreen(name='welcome')
         welcome_layout = BoxLayout(orientation='vertical')
         with self.welcome_screen.canvas.before:
@@ -187,7 +289,9 @@ class NotesApp(MDApp):
         self.welcome_screen.add_widget(welcome_layout)
         self.screen_manager.add_widget(self.welcome_screen)
 
-        # Main Screen
+        # ----------------------------------------------------------------
+        # 2) Main Screen
+        # ----------------------------------------------------------------
         self.main_screen = MDScreen(name='main')
         top_app_bar = MDTopAppBar(
             title='Notes App',
@@ -195,22 +299,20 @@ class NotesApp(MDApp):
             size_hint_y=None,
             height=dp(56),
             pos_hint={"top": 1},
-            md_bg_color=get_color_from_hex("#FFA500")
+            md_bg_color=get_color_from_hex("#FFA500"),
         )
-        # Open the navigation drawer when the menu icon is pressed
-        top_app_bar.left_action_items = [['menu', lambda x: self.drawer.set_state("open")]]
+        top_app_bar.left_action_items = [['cog', lambda x: self.drawer.set_state("open")]]
         top_app_bar.right_action_items = [
             ["magnify", lambda x: self.open_search_screen()],
-            ["weather-night", lambda x: self.toggle_dark_mode()]
+            ["weather-night", lambda x: self.toggle_dark_mode()],
         ]
 
-        # Content layout for main screen
         content_layout = BoxLayout(
             orientation='vertical',
             size_hint=(1, 1),
             pos_hint={"top": 0.87},
             padding=dp(12),
-            spacing=dp(12)
+            spacing=dp(12),
         )
         scroll_view = ScrollView(size_hint=(1, 1))
         self.notes_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=dp(12))
@@ -229,12 +331,14 @@ class NotesApp(MDApp):
             md_bg_color=get_color_from_hex("#6A1B9A"),
             theme_text_color="Custom",
             text_color=(1, 1, 1, 1),
-            on_release=self.open_add_note_screen
+            on_release=self.open_add_note_screen,
         )
         self.main_screen.add_widget(add_note_button)
         self.screen_manager.add_widget(self.main_screen)
 
-        # Search Screen
+        # ----------------------------------------------------------------
+        # 3) Search Screen
+        # ----------------------------------------------------------------
         self.search_screen = MDScreen(name='search')
         search_layout = BoxLayout(orientation='vertical')
         search_top_app_bar = MDTopAppBar(
@@ -243,16 +347,11 @@ class NotesApp(MDApp):
             size_hint_y=None,
             height=56,
             pos_hint={"top": 1},
-            md_bg_color=get_color_from_hex("#FFA500")
+            md_bg_color=get_color_from_hex("#FFA500"),
         )
         search_top_app_bar.left_action_items = [["arrow-left", lambda x: self.screen_manager.switch_to(self.main_screen)]]
         search_layout.add_widget(search_top_app_bar)
-        self.search_bar = TextInput(
-            hint_text='Search notes...',
-            size_hint=(1, None),
-            height=40,
-            multiline=False,
-        )
+        self.search_bar = TextInput(hint_text='Search notes...', size_hint=(1, None), height=40, multiline=False)
         self.search_bar.bind(text=self.filter_search_results)
         search_layout.add_widget(self.search_bar)
         scroll_view_search = ScrollView(size_hint=(1, 1))
@@ -263,7 +362,9 @@ class NotesApp(MDApp):
         self.search_screen.add_widget(search_layout)
         self.screen_manager.add_widget(self.search_screen)
 
-        # Additional Screens (Add, Edit, Share, View)
+        # ----------------------------------------------------------------
+        # 4) Additional Screens (Add, Edit, Share, View)
+        # ----------------------------------------------------------------
         self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
         self.add_note_screen.name = 'add_note'
         self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
@@ -277,19 +378,18 @@ class NotesApp(MDApp):
         self.screen_manager.add_widget(self.share_note_screen)
         self.screen_manager.add_widget(self.view_note_screen)
 
-        # Set the welcome screen as the current screen and schedule transition
         self.screen_manager.current = 'welcome'
         Clock.schedule_once(self.switch_to_main_screen, 5)
-
-        # Add the screen manager to the navigation layout
         self.nav_layout.add_widget(self.screen_manager)
 
-        # Create the navigation drawer; it calls open_add_note_screen when "Add New Note" is pressed
         self.drawer = MyNavigationDrawer(callback=self.open_add_note_screen)
         self.nav_layout.add_widget(self.drawer)
 
         return self.nav_layout
 
+    # ----------------------------------------------------------------
+    # Utility Methods
+    # ----------------------------------------------------------------
     def update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
@@ -307,13 +407,12 @@ class NotesApp(MDApp):
             self.theme_cls.theme_style = "Light"
             self.theme_cls.primary_palette = "Blue"
             text_color = (0, 0, 0, 1)
-            
         for note_widget in self.notes_layout.children:
             if isinstance(note_widget, NoteWidget):
                 note_widget.title_label.theme_text_color = "Custom"
                 note_widget.title_label.text_color = text_color
                 note_widget.body_label.theme_text_color = "Custom"
-                note_widget.body_label.text_color = text_color    
+                note_widget.body_label.text_color = text_color
 
     def update_share_callback(self, *args):
         print("Share callback triggered")
@@ -327,7 +426,8 @@ class NotesApp(MDApp):
     def filter_search_results(self, instance, value):
         search_text = self.search_bar.text.lower()
         self.search_results_layout.clear_widgets()
-        for note in self.notes:
+        sorted_notes = sorted(self.notes, key=lambda x: x[0], reverse=True)
+        for note in sorted_notes:
             if search_text in note[1].lower() or search_text in note[2].lower():
                 note_widget = NoteWidget(
                     note_id=note[0],
@@ -353,7 +453,8 @@ class NotesApp(MDApp):
 
     def filter_notes(self):
         self.notes_layout.clear_widgets()
-        for note in self.notes:
+        sorted_notes = sorted(self.notes, key=lambda x: x[0], reverse=True)
+        for note in sorted_notes:
             note_widget = NoteWidget(
                 note_id=note[0],
                 title=note[1],
@@ -398,32 +499,12 @@ class NotesApp(MDApp):
     def open_share_note_screen(self, note_id, title, body):
         self.current_share_note = {'id': note_id, 'title': title, 'body': body}
         menu_items = [
-            {
-                "text": "Share via Facebook",
-                "viewclass": "OneLineListItem",
-                "on_release": lambda: self.share_option_selected("Facebook")
-            },
-            {
-                "text": "Share via Twitter",
-                "viewclass": "OneLineListItem",
-                "on_release": lambda: self.share_option_selected("Twitter")
-            },
-            {
-                "text": "Share via Instagram",
-                "viewclass": "OneLineListItem",
-                "on_release": lambda: self.share_option_selected("Instagram")
-            },
-            {
-                "text": "Share via WhatsApp",
-                "viewclass": "OneLineListItem",
-                "on_release": lambda: self.share_option_selected("WhatsApp")
-            },
+            {"text": "Share via Facebook", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Facebook")},
+            {"text": "Share via Twitter", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Twitter")},
+            {"text": "Share via Instagram", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Instagram")},
+            {"text": "Share via WhatsApp", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("WhatsApp")},
         ]
-        self.share_menu = MDDropdownMenu(
-            caller=self.screen_manager.get_screen('main'),
-            items=menu_items,
-            width_mult=4,
-        )
+        self.share_menu = MDDropdownMenu(caller=self.screen_manager.get_screen('main'), items=menu_items, width_mult=4)
         self.share_menu.open()
 
     def share_option_selected(self, platform):
@@ -442,6 +523,7 @@ class NotesApp(MDApp):
                 self.whatsapp_share.share_on_whatsapp(note_id, title, body, lambda: print("Shared on WhatsApp"))
             except Exception as e:
                 print("Failed to share on WhatsApp:", e)
+
 
 if __name__ == '__main__':
     NotesApp().run()

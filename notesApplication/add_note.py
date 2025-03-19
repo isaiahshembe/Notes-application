@@ -39,6 +39,7 @@ class AddNoteScreen(MDScreen):
             size_hint_y=None,
             height=56,
             pos_hint={"top": 1},
+            md_bg_color=get_color_from_hex("#FFA500"), 
         )
         self.top_app_bar.left_action_items = [["arrow-left", lambda x: self.go_back()]]
         main_layout.add_widget(self.top_app_bar)
@@ -91,7 +92,7 @@ class AddNoteScreen(MDScreen):
             text="Select Date",
             size_hint=(1, None),
             height=48,
-            on_release=self.show_date_picker
+            on_release=self.show_date_picker  # This will open the date picker on tap
         )
         scroll_layout.add_widget(self.calendar_button)
 
@@ -184,7 +185,7 @@ class AddNoteScreen(MDScreen):
                 size_hint_y=None,
                 height=dp(100),
             ),
-            buttons=[
+            buttons=[ 
                 MDFlatButton(text="CANCEL", on_release=lambda x: self.dialog.dismiss()),
                 MDFlatButton(text="CREATE", on_release=self.create_table),
             ],
@@ -285,6 +286,3 @@ class AddNoteScreen(MDScreen):
     def on_date_selected(self, instance, date, *args):
         """Handle the selected date."""
         self.calendar_button.text = date.strftime("%Y-%m-%d")
-
-    def go_back(self, obj=None):
-        self.screen_manager.current = 'main'

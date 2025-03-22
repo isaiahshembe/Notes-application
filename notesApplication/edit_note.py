@@ -19,16 +19,19 @@ class EditNoteScreen(MDScreen):
         self.conn = conn
         self.dialog = None
 
-        # Top App Bar
+        # Main layout holds the top app bar and content
+        main_layout = MDBoxLayout(orientation='vertical')
+
+        # Top App Bar with explicitly set orange color (#FFA500)
         top_app_bar = MDTopAppBar(
             title='Edit Note',
-            pos_hint={"top": 1},
             anchor_title='left',
-            md_bg_color=(0, 0.5, 1, 1),
+            md_bg_color=(1, 0.647, 0, 1),  # RGBA for "#FFA500"
             size_hint_y=None,
             height=56,
             left_action_items=[['arrow-left', lambda x: self.go_back()]],
         )
+        main_layout.add_widget(top_app_bar)
 
         # Content Layout
         content_layout = MDBoxLayout(
@@ -37,13 +40,16 @@ class EditNoteScreen(MDScreen):
             spacing=20,
         )
 
-        # Title and Body Fields
+        # Title Field with fixed height for visibility
         self.title_field = MDTextField(
             hint_text='Note Title',
             size_hint_x=1,
+            size_hint_y=None,
+            height=50,
             font_size=18,
         )
 
+        # Body Field
         self.body_field = MDTextField(
             hint_text='Note Body',
             multiline=True,
@@ -60,15 +66,17 @@ class EditNoteScreen(MDScreen):
             on_press=lambda x: self.save_changes(),
         )
 
-        # Add widgets to layout
+        # Add widgets to the content layout
         content_layout.add_widget(self.title_field)
         content_layout.add_widget(self.body_field)
         content_layout.add_widget(save_button)
         content_layout.add_widget(Widget())
 
-        # Add to screen
-        self.add_widget(content_layout)
-        self.add_widget(top_app_bar)
+        # Add content layout to the main layout
+        main_layout.add_widget(content_layout)
+
+        # Add main layout to the screen
+        self.add_widget(main_layout)
 
         # Load existing title and body if provided
         if title is not None and body is not None:
@@ -81,9 +89,9 @@ class EditNoteScreen(MDScreen):
 
         if title.strip() and body.strip():  # Check if fields are filled
             self.update_note_in_db(title, body)
-            self.callback(title, body, self.note_id)  # Call the callback function to update UI or list
-            self.show_confirmation_dialog()  # Show success dialog
-            self.go_back()  # Go back to main screen
+            self.callback(title, body, self.note_id)
+            self.show_confirmation_dialog()
+            self.go_back()
         else:
             self.show_error_dialog("Both Title and Body are required!")
 
@@ -97,9 +105,7 @@ class EditNoteScreen(MDScreen):
             self.dialog = MDDialog(
                 text="Note edited successfully!",
                 buttons=[
-                    MDFlatButton(
-                        text="OK", on_release=self.close_dialog
-                    ),
+                    MDFlatButton(text="OK", on_release=self.close_dialog),
                 ],
             )
         self.dialog.open()
@@ -108,9 +114,7 @@ class EditNoteScreen(MDScreen):
         error_dialog = MDDialog(
             text=message,
             buttons=[
-                MDFlatButton(
-                    text="OK", on_release=lambda x: error_dialog.dismiss()
-                ),
+                MDFlatButton(text="OK", on_release=lambda x: error_dialog.dismiss()),
             ],
         )
         error_dialog.open()
@@ -124,7 +128,7 @@ class EditNoteScreen(MDScreen):
 
 class NotesApp(MDApp):
     def build(self):
-        self.conn = sqlite3.connect('notes.db')  # Your DB
+        self.conn = sqlite3.connect('notes.db')
         self.screen_manager = ScreenManager()
 
         def dummy_callback(title, body, note_id):

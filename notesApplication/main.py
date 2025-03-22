@@ -6,6 +6,7 @@ from kivy.uix.screenmanager import ScreenManager
 from kivy.uix.label import Label
 import os
 
+
 from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.window import Window
@@ -13,7 +14,6 @@ from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 import sqlite3
-from kivy.uix.image import Image
 
 # KivyMD imports
 from kivymd.app import MDApp
@@ -75,6 +75,7 @@ class MyNavigationDrawer(MDNavigationDrawer):
         )
 
         # App icon
+        
         app_icon = Image(
             source='assets/notepad.png',  # Replace with your icon name (or use an image)
             size_hint=(None, None),
@@ -146,6 +147,9 @@ class MyNavigationDrawer(MDNavigationDrawer):
         if item_name == "recommend":
             self.callback()
 
+            
+
+
 # ----------------------------------------------------------------
 # Updated NoteWidget Class
 # ----------------------------------------------------------------
@@ -161,7 +165,7 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
         # Background with rounded corners
         with self.canvas.before:
             self.bg_color = Color(rgba=get_color_from_hex("#FFFFFF"))
-            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15),])
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15)])
         self.bind(size=self._update_rect, pos=self._update_rect)
 
         # Create inner container for title and body
@@ -282,7 +286,8 @@ class NotesApp(MDApp):
         # 2) Main Screen
         # ----------------------------------------------------------------
         self.main_screen = MDScreen(name='main')
-        top_app_bar = MDTopAppBar(
+        # Store the top app bar as an instance variable so it can be updated later.
+        self.top_app_bar = MDTopAppBar(
             title='Notes App',
             anchor_title='left',
             size_hint_y=None,
@@ -290,8 +295,8 @@ class NotesApp(MDApp):
             pos_hint={"top": 1},
             md_bg_color=get_color_from_hex("#FFA500"),
         )
-        top_app_bar.left_action_items = [['cog', lambda x: self.drawer.set_state("open")]]
-        top_app_bar.right_action_items = [
+        self.top_app_bar.left_action_items = [['cog', lambda x: self.drawer.set_state("open")]]
+        self.top_app_bar.right_action_items = [
             ["magnify", lambda x: self.open_search_screen()],
             ["weather-night", lambda x: self.toggle_dark_mode()],
         ]
@@ -309,7 +314,7 @@ class NotesApp(MDApp):
         self.load_notes()
         scroll_view.add_widget(self.notes_layout)
         content_layout.add_widget(scroll_view)
-        self.main_screen.add_widget(top_app_bar)
+        self.main_screen.add_widget(self.top_app_bar)
         self.main_screen.add_widget(content_layout)
 
         add_note_button = MDIconButton(
@@ -392,10 +397,14 @@ class NotesApp(MDApp):
             self.theme_cls.theme_style = "Dark"
             self.theme_cls.primary_palette = "BlueGray"
             text_color = (0.4, 0.5, 0.6, 1)
+            # Set top app bar to blue gray for dark mode.
+            self.top_app_bar.md_bg_color = get_color_from_hex("#607D8B")
         else:
             self.theme_cls.theme_style = "Light"
             self.theme_cls.primary_palette = "Orange"
             text_color = (0, 0, 0, 1)
+            # Reset the top app bar color to orange.
+            self.top_app_bar.md_bg_color = get_color_from_hex("#FFA500")
         for note_widget in self.notes_layout.children:
             if isinstance(note_widget, NoteWidget):
                 note_widget.title_label.theme_text_color = "Custom"
@@ -410,6 +419,9 @@ class NotesApp(MDApp):
         self.load_notes()
         self.search_bar.text = ""
         self.search_results_layout.clear_widgets()
+        # Check if the 'search' screen exists; if not, add it.
+        if not self.screen_manager.has_screen("search"):
+            self.screen_manager.add_widget(self.search_screen)
         self.screen_manager.current = 'search'
 
     def filter_search_results(self, instance, value):

@@ -4,10 +4,12 @@ from kivymd.uix.button import MDFlatButton, MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.pickers import MDDatePicker
 from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 from kivy.utils import get_color_from_hex
 import datetime
+
 
 # Import share functions (assumed implemented elsewhere)
 from whatsapp_share import WhatsAppShare
@@ -17,13 +19,13 @@ from instagram_share import share_on_instagram
 
 
 class ViewNoteScreen(MDScreen):
-    def __init__(self, **kwargs):
+    def __init__(self, note_title="", note_body="", **kwargs):
         super().__init__(**kwargs)
 
         # Note data and callback placeholders
         self.note_id = None
-        self.note_title = ""
-        self.note_body = ""
+        self.note_title = note_title
+        self.note_body = note_body
         self.delete_callback = None  
         self.edit_callback = None    
 
@@ -37,7 +39,9 @@ class ViewNoteScreen(MDScreen):
             spacing=dp(12)
         )
 
-        # Top Row: Back button, Date, Buttons with orange background
+        # ------------------------------
+        # Top Row: Back button, Date, Menu
+        # ------------------------------
         self.top_row = MDBoxLayout(
             orientation='horizontal',
             size_hint_y=None,
@@ -49,7 +53,7 @@ class ViewNoteScreen(MDScreen):
 
         self.back_button = MDIconButton(
             icon="arrow-left",
-            text_color=get_color_from_hex("#FFFFFF"),  # White text color for contrast
+            text_color=get_color_from_hex("#FFFFFF"),
             on_release=self.on_back
         )
 
@@ -59,13 +63,12 @@ class ViewNoteScreen(MDScreen):
             font_style="H6",
             theme_text_color="Secondary",
             halign="center",
-            size_hint_x=1  # Ensure it takes full width to center the date
+            size_hint_x=1
         )
 
-        # Three-dot menu button
         self.menu_button = MDIconButton(
             icon="dots-vertical",
-            text_color=get_color_from_hex("#FFFFFF"),  # White text color for contrast
+            text_color=get_color_from_hex("#FFFFFF"),
             on_release=self.open_menu
         )
 
@@ -73,7 +76,9 @@ class ViewNoteScreen(MDScreen):
         self.top_row.add_widget(self.date_label)
         self.top_row.add_widget(self.menu_button)
 
-        # Buttons Row: Set Reminder, Save, Edit
+        # ------------------------------
+        # Buttons Row: Alarm Icon (Reminder), Save, Edit
+        # ------------------------------
         self.button_row = MDGridLayout(
             cols=3,
             size_hint_y=None,
@@ -81,8 +86,9 @@ class ViewNoteScreen(MDScreen):
             spacing=dp(10)
         )
 
-        self.reminder_button = MDFlatButton(
-            text="Set Reminder",
+        # Change reminder button to an alarm icon
+        self.reminder_button = MDIconButton(
+            icon="alarm",
             text_color=get_color_from_hex("#7B1FA2"),
             on_release=self.on_set_reminder
         )
@@ -105,7 +111,7 @@ class ViewNoteScreen(MDScreen):
 
         # Title Label
         self.title_label = MDLabel(
-            text="",
+            text=self.note_title,
             font_style="H5",
             theme_text_color="Primary",
             halign="left",
@@ -114,10 +120,12 @@ class ViewNoteScreen(MDScreen):
             padding=[dp(10), dp(5)]
         )
 
+        # ------------------------------
         # Scrollable Body
+        # ------------------------------
         self.scroll_view = ScrollView(size_hint=(1, 1))
         self.body_label = MDLabel(
-            text="",
+            text=self.note_body,
             font_style="Body1",
             theme_text_color="Secondary",
             halign="left",
@@ -127,32 +135,21 @@ class ViewNoteScreen(MDScreen):
         self.body_label.bind(texture_size=self._adjust_body_height)
         self.scroll_view.add_widget(self.body_label)
 
-        # Assemble Layout
+        # Set the date (formatted)
+        date_str = datetime.datetime.now().strftime("%d %B %Y, %A")
+        self.date_label.text = date_str
+
+        # Adjust body height based on content
+        self.body_label.texture_update()
+        self._adjust_body_height()
+
+        # Assemble the layout
         self.main_layout.add_widget(self.top_row)
         self.main_layout.add_widget(self.button_row)
         self.main_layout.add_widget(self.title_label)
         self.main_layout.add_widget(self.scroll_view)
+
         self.add_widget(self.main_layout)
-
-    def display_note(self, note_id, title, body, delete_callback=None, edit_callback=None):
-        """
-        Populates the screen with the note's details.
-        """
-        self.note_id = note_id
-        self.note_title = title
-        self.note_body = body
-        self.delete_callback = delete_callback
-        self.edit_callback = edit_callback
-
-        # Set the date (Formatted)
-        date_str = datetime.datetime.now().strftime("%d %B %Y, %A")
-        self.date_label.text = date_str
-
-        # Update title and body labels
-        self.title_label.text = title
-        self.body_label.text = body
-        self.body_label.texture_update()
-        self._adjust_body_height()
 
     def _adjust_body_height(self, *args):
         """Adjust the body_label's height to fit its text."""
@@ -164,8 +161,13 @@ class ViewNoteScreen(MDScreen):
             self.manager.current = 'main'
 
     def on_set_reminder(self, *args):
-        """Handle Reminder Button Press."""
-        print("Set Reminder tapped!")
+        """Open a calendar (MDDatePicker) to set a reminder."""
+        date_dialog = MDDatePicker(callback=self.on_date_selected)
+        date_dialog.open()
+
+    def on_date_selected(self, date_obj):
+        """Callback for the selected date from MDDatePicker."""
+        print("Reminder set for:", date_obj)
 
     def on_save(self, *args):
         """Handle Save Button Press."""
@@ -208,7 +210,12 @@ class ViewNoteScreen(MDScreen):
             elif platform == "Instagram":
                 share_on_instagram(self.note_id)
             elif platform == "WhatsApp":
-                self.whatsapp_share.share_on_whatsapp(self.note_id, self.note_title, self.note_body, lambda: print("Shared"))
+                self.whatsapp_share.share_on_whatsapp(
+                    self.note_id,
+                    self.note_title,
+                    self.note_body,
+                    lambda: print("Shared on WhatsApp")
+                )
         except Exception as e:
             print(f"Failed to share on {platform}: {e}")
 
@@ -216,3 +223,19 @@ class ViewNoteScreen(MDScreen):
         """Handles Delete action."""
         if self.delete_callback:
             self.delete_callback(self.note_id)
+
+    def display_note(self, note_id, title, body, delete_callback, edit_callback):
+        """
+        Updates the screen with the given note data and callbacks.
+        """
+        self.note_id = note_id
+        self.note_title = title
+        self.note_body = body
+        self.delete_callback = delete_callback
+        self.edit_callback = edit_callback
+
+        # Update UI elements
+        self.title_label.text = title
+        self.body_label.text = body
+        self.body_label.texture_update()
+        self._adjust_body_height()

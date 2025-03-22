@@ -28,7 +28,6 @@ from kivymd.uix.label import MDLabel
 from kivymd.theming import ThemeManager
 
 # Custom modules (ensure these paths are correct or adjust as needed)
-from text_widget import NoteWidget  # We'll override this with our new NoteWidget below
 from add_note import AddNoteScreen
 from edit_note import EditNoteScreen
 from share_note import ShareNoteScreen
@@ -45,15 +44,11 @@ def share_on_twitter(note_id):
 def share_on_instagram(note_id):
     print(f"Sharing note {note_id} on Instagram (placeholder).")
 
-
 # ----------------------------------------------------------------
 # Custom Navigation Drawer Class with Pink Header
 # ----------------------------------------------------------------
 class MyNavigationDrawer(MDNavigationDrawer):
     def __init__(self, callback, **kwargs):
-        """
-        :param callback: a function to be called when certain items are pressed.
-        """
         super().__init__(**kwargs)
         self.callback = callback
 
@@ -77,11 +72,9 @@ class MyNavigationDrawer(MDNavigationDrawer):
             size_hint_y=None,
             height=dp(100),
             pos_hint={"center_x": 0.5},
-            
         )
 
         # App icon
-        
         app_icon = Image(
             source='assets/notepad.png',  # Replace with your icon name (or use an image)
             size_hint=(None, None),
@@ -105,11 +98,10 @@ class MyNavigationDrawer(MDNavigationDrawer):
         # MDList for menu items
         drawer_list = MDList()
         item_calender = OneLineIconListItem(text="Favorite")
-        item_calender.add_widget(IconLeftWidget(icon="file-star",))
+        item_calender.add_widget(IconLeftWidget(icon="file-star"))
         item_calender.bind(on_release=lambda x: self.on_item_press("rate_us"))
         drawer_list.add_widget(item_calender)
 
-        
         item_rate = OneLineIconListItem(text="Rate Us")
         item_rate.add_widget(IconLeftWidget(icon="heart-circle"))
         item_rate.bind(on_release=lambda x: self.on_item_press("rate_us"))
@@ -154,15 +146,11 @@ class MyNavigationDrawer(MDNavigationDrawer):
         if item_name == "recommend":
             self.callback()
 
-            
-
-
 # ----------------------------------------------------------------
 # Updated NoteWidget Class
 # ----------------------------------------------------------------
 class NoteWidget(ButtonBehavior, MDBoxLayout):
     def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, view_callback, **kwargs):
-        # Use horizontal layout: text container on left and menu button on right.
         super().__init__(orientation='horizontal', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
         self.note_id = note_id
         self.delete_callback = delete_callback
@@ -242,7 +230,6 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
 
     def open_view_screen(self, *args):
         self.view_callback(self.note_id, self.title_label.text, self.body_label.text)
-
 
 # ----------------------------------------------------------------
 # Main App
@@ -381,7 +368,7 @@ class NotesApp(MDApp):
         self.screen_manager.add_widget(self.view_note_screen)
 
         self.screen_manager.current = 'welcome'
-        Clock.schedule_once(self.switch_to_main_screen, 5)
+        Clock.schedule_once(self.switch_to_main_screen, 10)
         self.nav_layout.add_widget(self.screen_manager)
 
         self.drawer = MyNavigationDrawer(callback=self.open_add_note_screen)
@@ -407,7 +394,7 @@ class NotesApp(MDApp):
             text_color = (0.4, 0.5, 0.6, 1)
         else:
             self.theme_cls.theme_style = "Light"
-            self.theme_cls.primary_palette = "Blue"
+            self.theme_cls.primary_palette = "Orange"
             text_color = (0, 0, 0, 1)
         for note_widget in self.notes_layout.children:
             if isinstance(note_widget, NoteWidget):
@@ -445,8 +432,8 @@ class NotesApp(MDApp):
     def open_add_note_screen(self, *args):
         self.screen_manager.current = 'add_note'
 
-    def add_note_callback(self, title, body, date):
-        self.save_note(title, body)
+    def add_note_callback(self, title, date, body):
+        self.save_note(title, date, body)
 
     def load_notes(self):
         self.cursor.execute('SELECT id, title, body FROM notes')
@@ -468,10 +455,10 @@ class NotesApp(MDApp):
             )
             self.notes_layout.add_widget(note_widget)
 
-    def save_note(self, title, body):
-        self.cursor.execute('INSERT INTO notes (title, body) VALUES (?, ?)', (title, body))
+    def save_note(self, title, date, body):
+        self.cursor.execute('INSERT INTO notes (title, date, body) VALUES (?, ?, ?)', (title, date, body))
         self.conn.commit()
-        self.cursor.execute('SELECT id, title, body FROM notes')
+        self.cursor.execute('SELECT id, title, date, body FROM notes')
         print("DEBUG: All notes in DB:", self.cursor.fetchall())
         self.load_notes()
 
@@ -525,7 +512,6 @@ class NotesApp(MDApp):
                 self.whatsapp_share.share_on_whatsapp(note_id, title, body, lambda: print("Shared on WhatsApp"))
             except Exception as e:
                 print("Failed to share on WhatsApp:", e)
-
 
 if __name__ == '__main__':
     NotesApp().run()

@@ -722,7 +722,7 @@ class NotesApp(MDApp):
         """Show about dialog"""
         self.dialog = MDDialog(
             title="About Notes App",
-            text="Version 1.0\n\nA simple notes app to keep your thoughts organized.\n\n© 2023 Your Company",
+            text="Version 1.0\n\nA simple notes app to keep your thoughts organized.\n\n© 2025 NotesApp",
             buttons=[
                 MDFlatButton(
                     text="OK",

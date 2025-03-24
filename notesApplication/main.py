@@ -5,8 +5,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager
 from kivy.uix.label import Label
 import os
-
-
+import platform
 from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.window import Window
@@ -14,6 +13,7 @@ from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 import sqlite3
+from kivy.uix.image import Image
 
 # KivyMD imports
 from kivymd.app import MDApp
@@ -27,22 +27,86 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivymd.theming import ThemeManager
 
-# Custom modules (ensure these paths are correct or adjust as needed)
+# Custom modules
 from add_note import AddNoteScreen
 from edit_note import EditNoteScreen
 from share_note import ShareNoteScreen
 from view_note import ViewNoteScreen
 from whatsapp_share import WhatsAppShare
 
-# Placeholder social sharing functions
-def share_on_facebook(note_id):
-    print(f"Sharing note {note_id} on Facebook (placeholder).")
+# Try to import plyer.share with fallback
+try:
+    from plyer import share
+    PLYER_AVAILABLE = True
+except ImportError:
+    PLYER_AVAILABLE = False
+    print("Plyer share not available")
 
-def share_on_twitter(note_id):
-    print(f"Sharing note {note_id} on Twitter (placeholder).")
+def share_note_text(note_id, title, body):
+    """
+    Share a note's title and body as plain text using platform-specific methods
+    """
+    try:
+        text_to_share = f"{title}\n\n{body}"
+        
+        if platform == 'android':
+            try:
+                from jnius import autoclass
+                Intent = autoclass('android.content.Intent')
+                String = autoclass('java.lang.String')
+                intent = Intent()
+                intent.setAction(Intent.ACTION_SEND)
+                intent.setType("text/plain")
+                intent.putExtra(Intent.EXTRA_TEXT, String(text_to_share))
+                current_activity = autoclass('org.kivy.android.PythonActivity').mActivity
+                current_activity.startActivity(Intent.createChooser(intent, String("Share via")))
+            except Exception as e:
+                print(f"Android sharing failed: {e}")
+                # Fallback to email
+                import webbrowser
+                url = f"mailto:?subject={title}&body={body}"
+                webbrowser.open(url)
+        elif PLYER_AVAILABLE:
+            share.share(text=text_to_share)
+        else:
+            # Fallback for other platforms
+            import webbrowser
+            url = f"mailto:?subject={title}&body={body}"
+            webbrowser.open(url)
+            
+        print(f"Note {note_id} shared successfully!")
+    except Exception as e:
+        print(f"Failed to share note: {e}")
 
-def share_on_instagram(note_id):
-    print(f"Sharing note {note_id} on Instagram (placeholder).")
+def share_on_facebook(note_id, title, body):
+    """Share note on Facebook"""
+    try:
+        text_to_share = f"{title}\n\n{body}"
+        import webbrowser
+        url = f"https://www.facebook.com/sharer/sharer.php?u=&quote={text_to_share}"
+        webbrowser.open(url)
+        print(f"Note {note_id} shared on Facebook")
+    except Exception as e:
+        print(f"Failed to share on Facebook: {e}")
+
+def share_on_twitter(note_id, title, body):
+    """Share note on Twitter"""
+    try:
+        text_to_share = f"{title}\n\n{body}"
+        import webbrowser
+        url = f"https://twitter.com/intent/tweet?text={text_to_share}"
+        webbrowser.open(url)
+        print(f"Note {note_id} shared on Twitter")
+    except Exception as e:
+        print(f"Failed to share on Twitter: {e}")
+
+def share_on_instagram(note_id, title, body):
+    """Share note text (Instagram doesn't support direct text sharing)"""
+    try:
+        share_note_text(note_id, title, body)
+        print(f"Note {note_id} shared via system sharing (Instagram)")
+    except Exception as e:
+        print(f"Failed to share on Instagram: {e}")
 
 # ----------------------------------------------------------------
 # Custom Navigation Drawer Class with Pink Header
@@ -75,9 +139,8 @@ class MyNavigationDrawer(MDNavigationDrawer):
         )
 
         # App icon
-        
         app_icon = Image(
-            source='assets/notepad.png',  # Replace with your icon name (or use an image)
+            source='assets/notepad.png',
             size_hint=(None, None),
             size=(dp(100), dp(100)),
             allow_stretch=True
@@ -147,9 +210,6 @@ class MyNavigationDrawer(MDNavigationDrawer):
         if item_name == "recommend":
             self.callback()
 
-            
-
-
 # ----------------------------------------------------------------
 # Updated NoteWidget Class
 # ----------------------------------------------------------------
@@ -165,7 +225,7 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
         # Background with rounded corners
         with self.canvas.before:
             self.bg_color = Color(rgba=get_color_from_hex("#FFFFFF"))
-            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15)])
+            self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15),])
         self.bind(size=self._update_rect, pos=self._update_rect)
 
         # Create inner container for title and body
@@ -199,8 +259,7 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             icon="dots-vertical",
             pos_hint={"center_y": 0.5},
             theme_text_color="Custom",
-            text_color=get_color_from_hex("#000000")
-        )
+            text_color=get_color_from_hex("#000000"))
         self.menu_button.bind(on_release=self.open_menu)
         self.add_widget(self.menu_button)
 
@@ -248,6 +307,7 @@ class NotesApp(MDApp):
         self.theme_cls = ThemeManager()  # Initialize ThemeManager
         self.dark_mode = False  # Track dark mode state
         self.whatsapp_share = WhatsAppShare()
+        self.current_share_note = None
 
     def init_db(self):
         self.conn = sqlite3.connect('notes.db')
@@ -286,8 +346,7 @@ class NotesApp(MDApp):
         # 2) Main Screen
         # ----------------------------------------------------------------
         self.main_screen = MDScreen(name='main')
-        # Store the top app bar as an instance variable so it can be updated later.
-        self.top_app_bar = MDTopAppBar(
+        top_app_bar = MDTopAppBar(
             title='Notes App',
             anchor_title='left',
             size_hint_y=None,
@@ -295,8 +354,8 @@ class NotesApp(MDApp):
             pos_hint={"top": 1},
             md_bg_color=get_color_from_hex("#FFA500"),
         )
-        self.top_app_bar.left_action_items = [['cog', lambda x: self.drawer.set_state("open")]]
-        self.top_app_bar.right_action_items = [
+        top_app_bar.left_action_items = [['cog', lambda x: self.drawer.set_state("open")]]
+        top_app_bar.right_action_items = [
             ["magnify", lambda x: self.open_search_screen()],
             ["weather-night", lambda x: self.toggle_dark_mode()],
         ]
@@ -314,7 +373,7 @@ class NotesApp(MDApp):
         self.load_notes()
         scroll_view.add_widget(self.notes_layout)
         content_layout.add_widget(scroll_view)
-        self.main_screen.add_widget(self.top_app_bar)
+        self.main_screen.add_widget(top_app_bar)
         self.main_screen.add_widget(content_layout)
 
         add_note_button = MDIconButton(
@@ -373,7 +432,7 @@ class NotesApp(MDApp):
         self.screen_manager.add_widget(self.view_note_screen)
 
         self.screen_manager.current = 'welcome'
-        Clock.schedule_once(self.switch_to_main_screen, 10)
+        Clock.schedule_once(self.switch_to_main_screen, 3)  # Reduced from 10 to 3 seconds
         self.nav_layout.add_widget(self.screen_manager)
 
         self.drawer = MyNavigationDrawer(callback=self.open_add_note_screen)
@@ -397,14 +456,10 @@ class NotesApp(MDApp):
             self.theme_cls.theme_style = "Dark"
             self.theme_cls.primary_palette = "BlueGray"
             text_color = (0.4, 0.5, 0.6, 1)
-            # Set top app bar to blue gray for dark mode.
-            self.top_app_bar.md_bg_color = get_color_from_hex("#607D8B")
         else:
             self.theme_cls.theme_style = "Light"
             self.theme_cls.primary_palette = "Orange"
             text_color = (0, 0, 0, 1)
-            # Reset the top app bar color to orange.
-            self.top_app_bar.md_bg_color = get_color_from_hex("#FFA500")
         for note_widget in self.notes_layout.children:
             if isinstance(note_widget, NoteWidget):
                 note_widget.title_label.theme_text_color = "Custom"
@@ -419,9 +474,6 @@ class NotesApp(MDApp):
         self.load_notes()
         self.search_bar.text = ""
         self.search_results_layout.clear_widgets()
-        # Check if the 'search' screen exists; if not, add it.
-        if not self.screen_manager.has_screen("search"):
-            self.screen_manager.add_widget(self.search_screen)
         self.screen_manager.current = 'search'
 
     def filter_search_results(self, instance, value):
@@ -504,6 +556,7 @@ class NotesApp(MDApp):
             {"text": "Share via Twitter", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Twitter")},
             {"text": "Share via Instagram", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Instagram")},
             {"text": "Share via WhatsApp", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("WhatsApp")},
+            {"text": "Share via Email", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Email")},
         ]
         self.share_menu = MDDropdownMenu(caller=self.screen_manager.get_screen('main'), items=menu_items, width_mult=4)
         self.share_menu.open()
@@ -513,17 +566,20 @@ class NotesApp(MDApp):
         note_id = self.current_share_note['id']
         title = self.current_share_note['title']
         body = self.current_share_note['body']
+
         if platform == "Facebook":
-            share_on_facebook(note_id)
+            share_on_facebook(note_id, title, body)
         elif platform == "Twitter":
-            share_on_twitter(note_id)
+            share_on_twitter(note_id, title, body)
         elif platform == "Instagram":
-            share_on_instagram(note_id)
+            share_on_instagram(note_id, title, body)
         elif platform == "WhatsApp":
             try:
                 self.whatsapp_share.share_on_whatsapp(note_id, title, body, lambda: print("Shared on WhatsApp"))
             except Exception as e:
                 print("Failed to share on WhatsApp:", e)
+        elif platform == "Email":
+            share_note_text(note_id, title, body)
 
 if __name__ == '__main__':
     NotesApp().run()

@@ -14,6 +14,11 @@ from kivy.clock import Clock
 from kivy.utils import get_color_from_hex
 import sqlite3
 from kivy.uix.image import Image
+import webbrowser
+from datetime import datetime
+from kivymd.uix.snackbar import Snackbar
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDFlatButton
 
 # KivyMD imports
 from kivymd.app import MDApp
@@ -43,9 +48,7 @@ except ImportError:
     print("Plyer share not available")
 
 def share_note_text(note_id, title, body):
-    """
-    Share a note's title and body as plain text using platform-specific methods
-    """
+    """Share a note's title and body as plain text using platform-specific methods"""
     try:
         text_to_share = f"{title}\n\n{body}"
         
@@ -63,16 +66,12 @@ def share_note_text(note_id, title, body):
             except Exception as e:
                 print(f"Android sharing failed: {e}")
                 # Fallback to email
-                import webbrowser
-                url = f"mailto:?subject={title}&body={body}"
-                webbrowser.open(url)
+                webbrowser.open(f"mailto:?subject={title}&body={body}")
         elif PLYER_AVAILABLE:
             share.share(text=text_to_share)
         else:
             # Fallback for other platforms
-            import webbrowser
-            url = f"mailto:?subject={title}&body={body}"
-            webbrowser.open(url)
+            webbrowser.open(f"mailto:?subject={title}&body={body}")
             
         print(f"Note {note_id} shared successfully!")
     except Exception as e:
@@ -82,7 +81,6 @@ def share_on_facebook(note_id, title, body):
     """Share note on Facebook"""
     try:
         text_to_share = f"{title}\n\n{body}"
-        import webbrowser
         url = f"https://www.facebook.com/sharer/sharer.php?u=&quote={text_to_share}"
         webbrowser.open(url)
         print(f"Note {note_id} shared on Facebook")
@@ -93,7 +91,6 @@ def share_on_twitter(note_id, title, body):
     """Share note on Twitter"""
     try:
         text_to_share = f"{title}\n\n{body}"
-        import webbrowser
         url = f"https://twitter.com/intent/tweet?text={text_to_share}"
         webbrowser.open(url)
         print(f"Note {note_id} shared on Twitter")
@@ -108,12 +105,10 @@ def share_on_instagram(note_id, title, body):
     except Exception as e:
         print(f"Failed to share on Instagram: {e}")
 
-# ----------------------------------------------------------------
-# Custom Navigation Drawer Class with Pink Header
-# ----------------------------------------------------------------
 class MyNavigationDrawer(MDNavigationDrawer):
     def __init__(self, callback, **kwargs):
         super().__init__(**kwargs)
+        self.app = MDApp.get_running_app()
         self.callback = callback
 
         # Main layout of the navigation drawer
@@ -161,41 +156,50 @@ class MyNavigationDrawer(MDNavigationDrawer):
 
         # MDList for menu items
         drawer_list = MDList()
-        item_calender = OneLineIconListItem(text="Favorite")
-        item_calender.add_widget(IconLeftWidget(icon="file-star"))
-        item_calender.bind(on_release=lambda x: self.on_item_press("rate_us"))
-        drawer_list.add_widget(item_calender)
+        
+        # Favorite
+        item_favorite = OneLineIconListItem(text="Favorite")
+        item_favorite.add_widget(IconLeftWidget(icon="star"))
+        item_favorite.bind(on_release=lambda x: self.on_item_press("favorite"))
+        drawer_list.add_widget(item_favorite)
 
+        # Rate Us
         item_rate = OneLineIconListItem(text="Rate Us")
         item_rate.add_widget(IconLeftWidget(icon="heart-circle"))
         item_rate.bind(on_release=lambda x: self.on_item_press("rate_us"))
         drawer_list.add_widget(item_rate)
 
+        # Share App
         item_recommend = OneLineIconListItem(text="Share App")
         item_recommend.add_widget(IconLeftWidget(icon="share"))
-        item_recommend.bind(on_release=lambda x: self.on_item_press("recommend"))
+        item_recommend.bind(on_release=lambda x: self.on_item_press("share_app"))
         drawer_list.add_widget(item_recommend)
 
+        # Get Premium
         item_premium = OneLineIconListItem(text="Get Premium")
         item_premium.add_widget(IconLeftWidget(icon="crown"))
         item_premium.bind(on_release=lambda x: self.on_item_press("premium"))
         drawer_list.add_widget(item_premium)
 
-        item_facebook = OneLineIconListItem(text="Feedback")
-        item_facebook.add_widget(IconLeftWidget(icon="message-processing"))
-        item_facebook.bind(on_release=lambda x: self.on_item_press("feedback"))
-        drawer_list.add_widget(item_facebook)
-
-        item_feedback = OneLineIconListItem(text="Recycle Bin")
-        item_feedback.add_widget(IconLeftWidget(icon="trash-can"))
+        # Feedback
+        item_feedback = OneLineIconListItem(text="Feedback")
+        item_feedback.add_widget(IconLeftWidget(icon="message-processing"))
         item_feedback.bind(on_release=lambda x: self.on_item_press("feedback"))
         drawer_list.add_widget(item_feedback)
 
+        # Recycle Bin
+        item_bin = OneLineIconListItem(text="Recycle Bin")
+        item_bin.add_widget(IconLeftWidget(icon="trash-can"))
+        item_bin.bind(on_release=lambda x: self.on_item_press("recycle_bin"))
+        drawer_list.add_widget(item_bin)
+
+        # About
         item_about = OneLineIconListItem(text="About")
         item_about.add_widget(IconLeftWidget(icon="information"))
         item_about.bind(on_release=lambda x: self.on_item_press("about"))
         drawer_list.add_widget(item_about)
 
+        # Privacy Policy
         item_privacy = OneLineIconListItem(text="Privacy Policy")
         item_privacy.add_widget(IconLeftWidget(icon="shield-account-outline"))
         item_privacy.bind(on_release=lambda x: self.on_item_press("privacy"))
@@ -205,22 +209,35 @@ class MyNavigationDrawer(MDNavigationDrawer):
         self.add_widget(main_layout)
 
     def on_item_press(self, item_name):
-        print(f"You pressed: {item_name}")
         self.set_state("close")
-        if item_name == "recommend":
-            self.callback()
+        app = self.app
+        
+        if item_name == "favorite":
+            app.show_favorite_notes()
+        elif item_name == "rate_us":
+            app.rate_app()
+        elif item_name == "share_app":
+            app.share_app()
+        elif item_name == "premium":
+            app.show_premium_dialog()
+        elif item_name == "feedback":
+            app.send_feedback()
+        elif item_name == "recycle_bin":
+            app.show_recycle_bin()
+        elif item_name == "about":
+            app.show_about()
+        elif item_name == "privacy":
+            app.show_privacy_policy()
 
-# ----------------------------------------------------------------
-# Updated NoteWidget Class
-# ----------------------------------------------------------------
 class NoteWidget(ButtonBehavior, MDBoxLayout):
-    def __init__(self, note_id, title, body, delete_callback, edit_callback, share_callback, view_callback, **kwargs):
-        super().__init__(orientation='horizontal', size_hint_y=None, height=dp(120), padding=dp(10), spacing=dp(10), **kwargs)
+    def __init__(self, note_id, title, date, body, delete_callback, edit_callback, share_callback, view_callback, **kwargs):
+        super().__init__(orientation='horizontal', size_hint_y=None, height=dp(140), padding=dp(10), spacing=dp(10), **kwargs)
         self.note_id = note_id
         self.delete_callback = delete_callback
         self.edit_callback = edit_callback
         self.share_callback = share_callback
         self.view_callback = view_callback
+        
 
         # Background with rounded corners
         with self.canvas.before:
@@ -228,7 +245,7 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             self.rect = RoundedRectangle(size=self.size, pos=self.pos, radius=[dp(15),])
         self.bind(size=self._update_rect, pos=self._update_rect)
 
-        # Create inner container for title and body
+        # Create inner container for title, date and body
         text_container = MDBoxLayout(orientation='vertical', spacing=dp(4))
         self.title_label = MDLabel(
             text=title,
@@ -237,9 +254,17 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             size_hint_y=None,
             height=dp(30),
             halign="left",
-            text_size=(Window.width - dp(100), None),
-            shorten=True,
         )
+        
+        self.date_label = MDLabel(
+            text=date,
+            font_style="Caption",
+            theme_text_color="Secondary",
+            size_hint_y=None,
+            height=dp(20),
+            halign="left",
+        )
+        
         self.body_label = MDLabel(
             text=body,
             font_style="Body1",
@@ -247,10 +272,10 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
             size_hint_y=None,
             height=dp(70),
             halign="left",
-            text_size=(Window.width - dp(100), None),
-            shorten=True,
         )
+        
         text_container.add_widget(self.title_label)
+        text_container.add_widget(self.date_label)
         text_container.add_widget(self.body_label)
         self.add_widget(text_container)
 
@@ -292,43 +317,68 @@ class NoteWidget(ButtonBehavior, MDBoxLayout):
         self.menu.open()
 
     def open_view_screen(self, *args):
-        self.view_callback(self.note_id, self.title_label.text, self.body_label.text)
+        self.view_callback(self.note_id, self.title_label.text, self.date_label.text, self.body_label.text)
 
-# ----------------------------------------------------------------
-# Main App
-# ----------------------------------------------------------------
 class NotesApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.conn = None
         self.cursor = None
         self.init_db()
-        self.notes = []  # Store notes for filtering
-        self.theme_cls = ThemeManager()  # Initialize ThemeManager
-        self.dark_mode = False  # Track dark mode state
+        self.notes = []
+        self.theme_cls = ThemeManager()
+        self.dark_mode = False
         self.whatsapp_share = WhatsAppShare()
         self.current_share_note = None
+        self.dialog = None
+        self.showing_favorites = False
+        self.showing_deleted = False
 
     def init_db(self):
+        """Initialize or upgrade the database schema"""
         self.conn = sqlite3.connect('notes.db')
         self.cursor = self.conn.cursor()
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS notes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
-                body TEXT
-            )
-        ''')
+        
+        # Check if table exists
+        self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='notes'")
+        table_exists = self.cursor.fetchone()
+        
+        if not table_exists:
+            # Create new table with all columns
+            self.cursor.execute('''
+                CREATE TABLE notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT,
+                    body TEXT,
+                    date TEXT,
+                    favorite INTEGER DEFAULT 0,
+                    deleted INTEGER DEFAULT 0
+                )
+            ''')
+        else:
+            # Check for missing columns
+            self.cursor.execute("PRAGMA table_info(notes)")
+            columns = [column[1] for column in self.cursor.fetchall()]
+            
+            if 'date' not in columns:
+                self.cursor.execute("ALTER TABLE notes ADD COLUMN date TEXT")
+                # Set default date for existing records
+                default_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                self.cursor.execute("UPDATE notes SET date=?", (default_date,))
+            
+            if 'favorite' not in columns:
+                self.cursor.execute("ALTER TABLE notes ADD COLUMN favorite INTEGER DEFAULT 0")
+            
+            if 'deleted' not in columns:
+                self.cursor.execute("ALTER TABLE notes ADD COLUMN deleted INTEGER DEFAULT 0")
+        
         self.conn.commit()
 
     def build(self):
-        # Wrap everything in an MDNavigationLayout
         self.nav_layout = MDNavigationLayout()
         self.screen_manager = ScreenManager()
 
-        # ----------------------------------------------------------------
-        # 1) Welcome Screen
-        # ----------------------------------------------------------------
+        # Welcome Screen
         self.welcome_screen = MDScreen(name='welcome')
         welcome_layout = BoxLayout(orientation='vertical')
         with self.welcome_screen.canvas.before:
@@ -342,9 +392,7 @@ class NotesApp(MDApp):
         self.welcome_screen.add_widget(welcome_layout)
         self.screen_manager.add_widget(self.welcome_screen)
 
-        # ----------------------------------------------------------------
-        # 2) Main Screen
-        # ----------------------------------------------------------------
+        # Main Screen
         self.main_screen = MDScreen(name='main')
         top_app_bar = MDTopAppBar(
             title='Notes App',
@@ -389,9 +437,7 @@ class NotesApp(MDApp):
         self.main_screen.add_widget(add_note_button)
         self.screen_manager.add_widget(self.main_screen)
 
-        # ----------------------------------------------------------------
-        # 3) Search Screen
-        # ----------------------------------------------------------------
+        # Search Screen
         self.search_screen = MDScreen(name='search')
         search_layout = BoxLayout(orientation='vertical')
         search_top_app_bar = MDTopAppBar(
@@ -415,9 +461,7 @@ class NotesApp(MDApp):
         self.search_screen.add_widget(search_layout)
         self.screen_manager.add_widget(self.search_screen)
 
-        # ----------------------------------------------------------------
-        # 4) Additional Screens (Add, Edit, Share, View)
-        # ----------------------------------------------------------------
+        # Additional Screens
         self.add_note_screen = AddNoteScreen(self.add_note_callback, self.screen_manager, self.conn)
         self.add_note_screen.name = 'add_note'
         self.edit_note_screen = EditNoteScreen(None, None, None, self.update_note_callback, self.screen_manager, self.conn)
@@ -432,7 +476,7 @@ class NotesApp(MDApp):
         self.screen_manager.add_widget(self.view_note_screen)
 
         self.screen_manager.current = 'welcome'
-        Clock.schedule_once(self.switch_to_main_screen, 3)  # Reduced from 10 to 3 seconds
+        Clock.schedule_once(self.switch_to_main_screen, 3)
         self.nav_layout.add_widget(self.screen_manager)
 
         self.drawer = MyNavigationDrawer(callback=self.open_add_note_screen)
@@ -440,9 +484,6 @@ class NotesApp(MDApp):
 
         return self.nav_layout
 
-    # ----------------------------------------------------------------
-    # Utility Methods
-    # ----------------------------------------------------------------
     def update_rect(self, instance, value):
         self.rect.pos = instance.pos
         self.rect.size = instance.size
@@ -479,12 +520,20 @@ class NotesApp(MDApp):
     def filter_search_results(self, instance, value):
         search_text = self.search_bar.text.lower()
         self.search_results_layout.clear_widgets()
-        sorted_notes = sorted(self.notes, key=lambda x: x[0], reverse=True)
-        for note in sorted_notes:
+        
+        if self.showing_favorites:
+            notes = [note for note in self.notes if note[4] == 1]  # favorite=1
+        elif self.showing_deleted:
+            notes = [note for note in self.notes if note[5] == 1]  # deleted=1
+        else:
+            notes = [note for note in self.notes if note[5] == 0]  # deleted=0
+
+        for note in notes:
             if search_text in note[1].lower() or search_text in note[2].lower():
                 note_widget = NoteWidget(
                     note_id=note[0],
                     title=note[1],
+                    date=note[3],
                     body=note[2],
                     delete_callback=self.delete_note,
                     edit_callback=self.open_edit_note_screen,
@@ -496,21 +545,41 @@ class NotesApp(MDApp):
     def open_add_note_screen(self, *args):
         self.screen_manager.current = 'add_note'
 
-    def add_note_callback(self, title, date, body):
-        self.save_note(title, date, body)
+    def add_note_callback(self, title, body, date=None):
+        if date is None:
+            date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.save_note(title, body, date)
+
+    def save_note(self, title, body, date):
+        self.cursor.execute('INSERT INTO notes (title, body, date) VALUES (?, ?, ?)', (title, body, date))
+        self.conn.commit()
+        self.load_notes()
 
     def load_notes(self):
-        self.cursor.execute('SELECT id, title, body FROM notes')
+        self.cursor.execute('SELECT id, title, body, date, favorite, deleted FROM notes')
         self.notes = self.cursor.fetchall()
         self.filter_notes()
 
     def filter_notes(self):
         self.notes_layout.clear_widgets()
-        sorted_notes = sorted(self.notes, key=lambda x: x[0], reverse=True)
-        for note in sorted_notes:
+        
+        if self.showing_favorites:
+            notes = [note for note in self.notes if note[4] == 1]  # favorite=1
+            self.show_snackbar("Showing favorite notes")
+        elif self.showing_deleted:
+            notes = [note for note in self.notes if note[5] == 1]  # deleted=1
+            self.show_snackbar("Showing deleted notes")
+        else:
+            notes = [note for note in self.notes if note[5] == 0]  # deleted=0
+
+        # Sort by date (newest first)
+        notes.sort(key=lambda x: x[3], reverse=True)
+        
+        for note in notes:
             note_widget = NoteWidget(
                 note_id=note[0],
                 title=note[1],
+                date=note[3],
                 body=note[2],
                 delete_callback=self.delete_note,
                 edit_callback=self.open_edit_note_screen,
@@ -519,19 +588,14 @@ class NotesApp(MDApp):
             )
             self.notes_layout.add_widget(note_widget)
 
-    def save_note(self, title, date, body):
-        self.cursor.execute('INSERT INTO notes (title, date, body) VALUES (?, ?, ?)', (title, date, body))
-        self.conn.commit()
-        self.cursor.execute('SELECT id, title, date, body FROM notes')
-        print("DEBUG: All notes in DB:", self.cursor.fetchall())
-        self.load_notes()
-
     def delete_note(self, note_id, note_widget):
-        self.cursor.execute('DELETE FROM notes WHERE id = ?', (note_id,))
+        # Soft delete (mark as deleted instead of actually deleting)
+        self.cursor.execute('UPDATE notes SET deleted=1 WHERE id=?', (note_id,))
         self.conn.commit()
         self.notes = [note for note in self.notes if note[0] != note_id]
         if note_widget.parent:
             note_widget.parent.remove_widget(note_widget)
+        self.show_snackbar("Note moved to recycle bin")
 
     def open_edit_note_screen(self, note_id, title, body):
         self.edit_note_screen.note_id = note_id
@@ -539,26 +603,37 @@ class NotesApp(MDApp):
         self.edit_note_screen.body_field.text = body
         self.screen_manager.current = 'edit_note'
 
-    def update_note_callback(self, title, body, note_id):
-        self.cursor.execute('UPDATE notes SET title = ?, body = ? WHERE id = ?', (title, body, note_id))
+    def update_note_callback(self, title, date, body, note_id):
+        self.cursor.execute('UPDATE notes SET title=?, date=?, body=? WHERE id=?', 
+                          (title, date, body, note_id))
         self.conn.commit()
         self.load_notes()
         self.screen_manager.current = 'main'
 
-    def open_view_note_screen(self, note_id, title, body):
-        self.view_note_screen.display_note(note_id, title, body, self.delete_note, self.open_edit_note_screen)
+    def open_view_note_screen(self, note_id, title, date, body):
+        self.view_note_screen.display_note(note_id, title, date, body, 
+                                         self.delete_note, self.open_edit_note_screen)
         self.screen_manager.current = 'view_note'
 
     def open_share_note_screen(self, note_id, title, body):
         self.current_share_note = {'id': note_id, 'title': title, 'body': body}
         menu_items = [
-            {"text": "Share via Facebook", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Facebook")},
-            {"text": "Share via Twitter", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Twitter")},
-            {"text": "Share via Instagram", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Instagram")},
-            {"text": "Share via WhatsApp", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("WhatsApp")},
-            {"text": "Share via Email", "viewclass": "OneLineListItem", "on_release": lambda: self.share_option_selected("Email")},
+            {"text": "Share via Facebook", "viewclass": "OneLineListItem", 
+             "on_release": lambda: self.share_option_selected("Facebook")},
+            {"text": "Share via Twitter", "viewclass": "OneLineListItem",
+             "on_release": lambda: self.share_option_selected("Twitter")},
+            {"text": "Share via Instagram", "viewclass": "OneLineListItem",
+             "on_release": lambda: self.share_option_selected("Instagram")},
+            {"text": "Share via WhatsApp", "viewclass": "OneLineListItem",
+             "on_release": lambda: self.share_option_selected("WhatsApp")},
+            {"text": "Share via Email", "viewclass": "OneLineListItem",
+             "on_release": lambda: self.share_option_selected("Email")},
         ]
-        self.share_menu = MDDropdownMenu(caller=self.screen_manager.get_screen('main'), items=menu_items, width_mult=4)
+        self.share_menu = MDDropdownMenu(
+            caller=self.screen_manager.get_screen('main'), 
+            items=menu_items, 
+            width_mult=4
+        )
         self.share_menu.open()
 
     def share_option_selected(self, platform):
@@ -575,11 +650,113 @@ class NotesApp(MDApp):
             share_on_instagram(note_id, title, body)
         elif platform == "WhatsApp":
             try:
-                self.whatsapp_share.share_on_whatsapp(note_id, title, body, lambda: print("Shared on WhatsApp"))
+                self.whatsapp_share.share_on_whatsapp(note_id, title, body, 
+                                                     lambda: print("Shared on WhatsApp"))
             except Exception as e:
                 print("Failed to share on WhatsApp:", e)
         elif platform == "Email":
             share_note_text(note_id, title, body)
+
+    # Navigation Drawer Functions
+    def show_favorite_notes(self):
+        """Show only favorite notes"""
+        self.showing_favorites = True
+        self.showing_deleted = False
+        self.load_notes()
+
+    def rate_app(self):
+        """Open app store for rating"""
+        try:
+            webbrowser.open("https://play.google.com/store/apps/details?id=com.your.app")
+        except Exception as e:
+            self.show_snackbar(f"Couldn't open store: {str(e)}")
+
+    def share_app(self):
+        """Share app download link"""
+        try:
+            share_text = "Check out this awesome notes app: https://play.google.com/store/apps/details?id=com.your.app"
+            if PLYER_AVAILABLE:
+                share.share(text=share_text)
+            else:
+                webbrowser.open(f"mailto:?subject=Check%20this%20app&body={share_text}")
+        except Exception as e:
+            self.show_snackbar(f"Couldn't share app: {str(e)}")
+
+    def show_premium_dialog(self):
+        """Show premium features dialog"""
+        self.dialog = MDDialog(
+            title="Premium Features",
+            text="Unlock these premium features:\n\n- Unlimited notes\n- Cloud sync\n- Advanced formatting\n- Dark mode themes",
+            buttons=[
+                MDFlatButton(
+                    text="CANCEL",
+                    on_release=lambda x: self.dialog.dismiss()
+                ),
+                MDFlatButton(
+                    text="UPGRADE",
+                    on_release=self.purchase_premium
+                ),
+            ],
+        )
+        self.dialog.open()
+
+    def purchase_premium(self, *args):
+        """Handle premium purchase"""
+        self.dialog.dismiss()
+        self.show_snackbar("Premium features unlocked!")
+
+    def send_feedback(self):
+        """Open email for feedback"""
+        try:
+            webbrowser.open("mailto:support@yourapp.com?subject=Notes%20App%20Feedback")
+        except Exception as e:
+            self.show_snackbar(f"Couldn't open email: {str(e)}")
+
+    def show_recycle_bin(self):
+        """Show deleted notes"""
+        self.showing_deleted = True
+        self.showing_favorites = False
+        self.load_notes()
+
+    def show_about(self):
+        """Show about dialog"""
+        self.dialog = MDDialog(
+            title="About Notes App",
+            text="Version 1.0\n\nA simple notes app to keep your thoughts organized.\n\n© 2023 Your Company",
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    on_release=lambda x: self.dialog.dismiss()
+                ),
+            ],
+        )
+        self.dialog.open()
+
+    def show_privacy_policy(self):
+        """Show privacy policy dialog"""
+        self.dialog = MDDialog(
+            title="Privacy Policy",
+            text="We respect your privacy:\n\n- We don't collect personal data\n- Your notes stay on your device\n- No tracking or analytics",
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    on_release=lambda x: self.dialog.dismiss()
+                ),
+            ],
+        )
+        self.dialog.open()
+
+    def show_snackbar(self, message):
+        """Helper to show snackbar messages"""
+        snackbar = Snackbar(
+            text=message,
+            snackbar_x="10dp",
+            snackbar_y="10dp",
+            size_hint_x=(
+                (Window.width - (dp(10) * 2)) / Window.width
+            )
+        )
+        snackbar.open()
 
 if __name__ == '__main__':
     NotesApp().run()

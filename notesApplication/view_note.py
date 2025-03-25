@@ -230,6 +230,7 @@ class ViewNoteScreen(MDScreen):
         """
         self.note_id = note_id
         self.note_title = title
+        self.note_date = date
         self.note_body = body
         self.delete_callback = delete_callback
         self.edit_callback = edit_callback

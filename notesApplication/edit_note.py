@@ -86,10 +86,11 @@ class EditNoteScreen(MDScreen):
     def save_changes(self):
         title = self.title_field.text
         body = self.body_field.text
+        
 
         if title.strip() and body.strip():  # Check if fields are filled
             self.update_note_in_db(title, body)
-            self.callback(title, body, self.note_id)
+            self.callback(title, body,  self.note_id)
             self.show_confirmation_dialog()
             self.go_back()
         else:

@@ -603,7 +603,8 @@ class NotesApp(MDApp):
         self.edit_note_screen.body_field.text = body
         self.screen_manager.current = 'edit_note'
 
-    def update_note_callback(self, title, date, body, note_id):
+    def update_note_callback(self, title, body, note_id):
+        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.cursor.execute('UPDATE notes SET title=?, date=?, body=? WHERE id=?', 
                           (title, date, body, note_id))
         self.conn.commit()

@@ -224,7 +224,7 @@ class ViewNoteScreen(MDScreen):
         if self.delete_callback:
             self.delete_callback(self.note_id)
 
-    def display_note(self, note_id, title, body, delete_callback, edit_callback):
+    def display_note(self, note_id, title, date, body, delete_callback, edit_callback, screen_manager=None):
         """
         Updates the screen with the given note data and callbacks.
         """
